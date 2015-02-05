@@ -1,0 +1,115 @@
+
+@import url(http://fonts.googleapis.com/css?family=PT+Sans:400,700);
+
+/*****************************************************************************
+/* Default tag style */
+
+a, a:visited {
+  color: #4183c4;
+}
+
+hr {
+  border: none;
+  border-bottom: 1px #ddd solid;
+}
+
+input {
+  background-color: #eef8ff;
+}
+input[type="submit"] {
+  background-color: #4183c4;
+}
+
+.button {
+  border: none;
+  background-color: #4183c4;
+  color: white;
+}
+
+
+/*****************************************************************************
+/* Main layout */
+
+body {
+  margin: 0px;
+  min-height: 500px;
+  font-family: "PT Sans", sans-serif;
+  font-weight: 500;
+}
+
+#wdmproject-logo {
+  color: white;
+  text-decoration: none;
+  font-size: 25pt;
+  font-weight: 700;
+  padding: 0 20px;
+}
+
+#wdmproject-header {
+  position: relative;
+  height: 50px;
+  background-color: #ddeeff;
+  color: white;
+  padding: 0 50px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+#wdmproject-body {
+  margin-top: 40px;
+  margin-bottom: 40px;
+  width: 980px;
+  min-height: 500px;
+  text-align: center;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+#wdmproject-footer {
+  text-align: center;
+  padding: 20px;
+  height: 30px;
+  margin-left: auto;
+  margin-right: auto;
+  background-color: #ddeeff;
+  color: #445588;
+}
+
+div#eba_welcome_box {
+  margin-left: auto;
+  margin-right: auto;
+}
+div#eba_welcome_box {
+  width: 480px;
+  padding: 10px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+div#eba_welcome_box h2 {
+  margin-top: 0;
+}
+div#eba_welcome_box input[type="submit"] {
+  width: 246px;
+  padding: 8px;
+  font-weight: bold;
+}
+
+/*****************************************************************************
+/* Misc boxes */
+ul#wdmproject-navbar {
+  list-style-type: none;
+  margin-bottom: 10px;
+  bottom: 0;
+  display: inline-block;
+}
+#wdmproject-navbar li {
+  display: inline-block;
+  padding-right: 15px;
+}
+
+#eba-user-box {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 500px;
+}
