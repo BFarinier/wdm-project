@@ -1,32 +1,13 @@
-type tags = [
-  | `Area
-  | `Beginarea
-  | `Endarea
-  | `Arid
-  | `Artist
-  | `Artistaccent
-  | `Alias
-  | `Begin
-  | `Comment
-  | `Country
-  | `End
-  | `Ended
-  | `Gender
-  | `Ipi
-  | `Sortname
-  | `Tag
-  | `Type
-  | `Title
-  | `Discid
-  | `Cat
-  | `Year
-  | `Tracks
-] 
+type artist_tags = [`Area|`Beginarea|`Endarea|`Arid|`Artist|`Artistaccent|`Alias|`Begin|`Comment|`Country|`End|`Ended|`Gender|`Ipi|`Sortname|`Tag|`Type]
+type freedb_tags = [`Artist|`Title|`Discid|`Cat|`Year|`Tracks]
+type tag_tags    = [`Tag]
+
+type tags = [artist_tags|freedb_tags|tag_tags]
 
 type _ t =
-  | Artist : [`Area|`Beginarea|`Endarea|`Arid|`Artist|`Artistaccent|`Alias|`Begin|`Comment|`Country|`End|`Ended|`Gender|`Ipi|`Sortname|`Tag|`Type] t
-  | Freedb : [`Artist|`Title|`Discid|`Cat|`Year|`Tracks] t
-  | Tag : [`Tag] t
+  | Artist : artist_tags t
+  | Freedb : freedb_tags t
+  | Tag    : tag_tags t
 
 let tags_to_string : [< tags] -> string = function
   | `Area -> "area"
@@ -67,5 +48,3 @@ let make_request (index: ([< tags] as 'a) t) (tag: 'a) ?(limit=25) ?(offset=0) s
     (if (offset > 0)
      then (Printf.sprintf "&offset=%i" offset)
      else "")    
-
-let str = make_request Freedb `Year ""
