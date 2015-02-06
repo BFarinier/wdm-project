@@ -38,7 +38,7 @@ let t_to_string : type a. a t -> string = function
   | Freedb -> "freedb"
   | Tag -> "tag"
 
-let make_request (index: ([< tags] as 'a) t) (tag: 'a) ?(limit=25) ?(offset=0) str : string =
+let make_request (index: 'a t) (tag: 'a) ?(limit=25) ?(offset=0) str : string =
   Printf.sprintf "http://musicbrainz.org/ws/2/%s/?query=%s:%s%s%s"
     (t_to_string index) (tags_to_string tag) str
     (if (limit <> 25 && limit >= 1 && limit <= 100)
