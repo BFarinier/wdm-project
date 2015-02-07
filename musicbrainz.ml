@@ -41,14 +41,16 @@ let searches_to_string : type a. a searches -> string = function
   | Tag -> "tag"
 
 let make_request (index: 'a searches) (tag: 'a) ?(limit=25) ?(offset=0) str : string =
-  Printf.sprintf "http://musicbrainz.org/ws/2/%s/?query=%s:%s%s%s"
-    (searches_to_string index) (tags_to_string tag) str
-    (if (limit <> 25 && limit >= 1 && limit <= 100)
-     then (Printf.sprintf "&limit=%i" limit)
-     else "")
-    (if (offset > 0)
-     then (Printf.sprintf "&offset=%i" offset)
-     else "")    
+  Printf.sprintf "http://musicbrainz.org/ws/2/%s/?%s"
+    (searches_to_string index)
+    (Ocsigen_lib.Url.make_encoded_parameters
+       (["query", (tags_to_string tag)^":"^str]
+        @ (if (limit <> 25 && limit >= 1 && limit <= 100)
+           then ["limit", string_of_int limit]
+           else [])
+        @ (if (offset > 0)
+           then ["offset", string_of_int offset]
+           else [])))
 
 let get_strings (url: string) : string list Lwt.t =
   let rec aux acc stream =
