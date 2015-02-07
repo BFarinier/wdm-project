@@ -1,24 +1,12 @@
-type heure = {
-  heure: int;
-  minutes: int;
-  secondes: int
-}
-
-type date = {
-  annee: int;
-  mois: int;
-  jour: int;
-  heure: heure
-}
+type date = CalendarLib.Calendar.t
 
 let parse_date s =
-  Scanf.sscanf s
-    "%d-%d-%dT%d:%d:%d"
-    (fun annee mois jour heure minutes secondes ->
-       { annee; mois; jour; heure = { heure; minutes; secondes } })
+  CalendarLib.Printer.Calendar.from_fstring
+    "%Y-%m-%dT%H:%M:%S"
+    s
 
 type salle = string
-type ville = string 
+type ville = string
 
 type query_lieu =
   | Ville of string
