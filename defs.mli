@@ -20,3 +20,5 @@ type concert = {
   lieu: ville * salle;
   date: date;
 }
+
+val print_concert : concert -> unit

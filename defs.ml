@@ -97,3 +97,8 @@ type concert = {
   lieu: ville * salle;
   date: date;
 }
+
+let print_concert c =
+  Printf.printf "Artiste: %s\n" c.artiste;
+  Printf.printf "À: %s, %s\n" (fst c.lieu) (snd c.lieu);
+  print_string "Le: "; CalendarLib.Printer.Calendar.dprint c.date; print_newline ()
