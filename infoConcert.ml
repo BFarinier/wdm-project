@@ -106,6 +106,10 @@ let netchannel_of_stream s =
   pipe#close_out ();
   Lwt.return pipe
 
+(* Custom DTD so that ocamlnet accepts <meta /> in <div> .. </div> blocks *)
+let custom_dtd =
+  Nethtml.html40_dtd |> List.modify "meta" (const (`Block, `Empty))
+
 module Html_helpers = struct
   open Nethtml
 
@@ -164,13 +168,9 @@ let extract_concerts (docs: Nethtml.document list): concert list =
   docs
   |> get_elt_content (p "html" [])
 
-  (* |> find_elt_content (fun _ attr_list content -> *)
-  (*   List.mem ("itemtype", "http://data-vocabulary.org/Event") attr_list && *)
-  (*   get_elt (p "meta" ["itemprop", "eventType"; "content", "Concert"]) content <> []) *)
-  (* WTF ocamlnet??!! *)
-
-  (* hack *)
-  |> find_elt_content (fun _ _ content -> get_elt (pa ["itemprop", "summary"]) content <> [])
+  |> find_elt_content (fun _ attr_list content ->
+    List.mem ("itemtype", "http://data-vocabulary.org/Event") attr_list &&
+    get_elt (p "meta" ["itemprop", "eventType"; "content", "Concert"]) content <> [])
     
   |> List.map (fun concert ->
     let name =
@@ -235,7 +235,7 @@ let get ?lieu (): concert list Lwt.t =
   |> Option.map_default (fun s ->
     netchannel_of_stream (Ocsigen_stream.get s) >>= fun pipe ->
     Ocsigen_stream.finalize s `Success >>= fun () ->
-    Nethtml.parse ~dtd:Nethtml.relaxed_html40_dtd (pipe :> Netchannels.in_obj_channel)
+    Nethtml.parse ~dtd:custom_dtd (pipe :> Netchannels.in_obj_channel)
     |> extract_concerts
     |> Lwt.return
   ) (Lwt.return [])
