@@ -52,4 +52,3 @@ let stats (library: string): (string * int) list =
   Hashtbl.enum artists
   |> Enum.map (Tuple2.map2 Set.cardinal)
   |> List.of_enum
-  |> Option.some
