@@ -22,3 +22,5 @@ module Xml_tree : sig
   val get_xml : 'a searches -> ([< tags ] as 'a) -> ?limit:int -> ?offset:int -> string -> t Lwt.t
 
 end
+
+val search_artist_tags : string -> (int * string) list Lwt.t
