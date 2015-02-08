@@ -1,3 +1,7 @@
 PKG batteries
 PKG ocsigenserver
 PKG calendar
+PKG camomile
+PKG taglib
+PKG ctypes
+PKG ctypes.foreign
