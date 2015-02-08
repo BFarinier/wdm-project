@@ -1,5 +1,7 @@
 open Batteries
 open Lwt_ops
+module Camomile = CamomileLibraryDefault.Camomile
+module CaseMap = Camomile.CaseMap.Make (Camomile.UTF8)
 
 open Defs
 
@@ -93,7 +95,7 @@ let netchannel_of_stream s =
   
   let rec aux s =
     Ocsigen_stream.next s >>= function
-    | Ocsigen_stream.Finished None -> return ()
+    | Ocsigen_stream.Finished None -> Lwt.return ()
     | Ocsigen_stream.Finished (Some s') -> aux s'
     | Ocsigen_stream.Cont (x, s') ->
       pipe#output_string x;
@@ -101,21 +103,25 @@ let netchannel_of_stream s =
   in
 
   aux s >>= fun () ->
-  return pipe
+  pipe#close_out ();
+  Lwt.return pipe
 
 module Html_helpers = struct
   open Nethtml
 
-  let get_elt_content pred : document list -> document list = fun docs ->
-    List.map (function
-      | Data _ -> []
+  let get_elt pred (docs: document list):
+    (string * (string * string) list * document list) list =
+    List.filter_map (function
+      | Data _ -> None
       | Element (e_name, e_attr, content) ->
-        if pred e_name e_attr content then 
-          content
+        if pred e_name e_attr content then
+          Some (e_name, e_attr, content)
         else
-          []
+          None
     ) docs
-    |> List.flatten
+
+  let get_elt_content pred : document list -> document list = fun docs ->
+    get_elt pred docs |> List.map Tuple3.third |> List.flatten
 
   let rec find_elt pred (docs: document list):
     (string * (string * string) list * document list) list =
@@ -147,6 +153,9 @@ module Html_helpers = struct
       | Element (_, _, content) -> collect_data content
     ) docs
     |> collapse
+    |> Str.split (Str.regexp "[ \\|\n\\|\r\\|\t]+")
+    |> List.filter ((<>) "")
+    |> String.join " "
 end
 
 let extract_concerts (docs: Nethtml.document list): concert list =
@@ -154,15 +163,21 @@ let extract_concerts (docs: Nethtml.document list): concert list =
 
   docs
   |> get_elt_content (p "html" [])
-  |> get_elt_content (p "body" [])
-  |> find_elt_content (fun _ attr_list content ->
-    List.mem ("itemtype", "http://data-vocabulary.org/Event") attr_list &&
-    get_elt_content (pa ["itemprop", "eventType"; "content", "Concert"]) content <> [])
+
+  (* |> find_elt_content (fun _ attr_list content -> *)
+  (*   List.mem ("itemtype", "http://data-vocabulary.org/Event") attr_list && *)
+  (*   get_elt (p "meta" ["itemprop", "eventType"; "content", "Concert"]) content <> []) *)
+  (* WTF ocamlnet??!! *)
+
+  (* hack *)
+  |> find_elt_content (fun _ _ content -> get_elt (pa ["itemprop", "summary"]) content <> [])
+    
   |> List.map (fun concert ->
     let name =
       find_elt_content (pa ["itemprop", "summary"]) concert
       |> List.first
-      |> collect_data in
+      |> collect_data
+      |> CaseMap.titlecase in
 
     let location_block =
       find_elt_content (pa ["itemtype", "http://data-vocabulary.org/Organization";
@@ -219,7 +234,8 @@ let get ?lieu (): concert list Lwt.t =
   frame.Ocsigen_http_frame.frame_content
   |> Option.map_default (fun s ->
     netchannel_of_stream (Ocsigen_stream.get s) >>= fun pipe ->
+    Ocsigen_stream.finalize s `Success >>= fun () ->
     Nethtml.parse ~dtd:Nethtml.relaxed_html40_dtd (pipe :> Netchannels.in_obj_channel)
     |> extract_concerts
-    |> return
+    |> Lwt.return
   ) (Lwt.return [])

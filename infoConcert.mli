@@ -1,3 +1,3 @@
 open Defs
 
-val get: ?lieu: query_lieu -> concert list
+val get: ?lieu: query_lieu -> unit -> concert list Lwt.t
