@@ -228,7 +228,10 @@ let get_stats conn =
           let (artist, album) = (Mpd.song_get_tag s Mpd.Tag_Artist 0,
                                  Mpd.song_get_tag s Mpd.Tag_Album 0) in
           Mpd.entity_free e;
-          add_album artist album;
+          (match artist, album with
+           | Some artist, Some album ->
+             add_album artist album
+           | _ -> ());
           loop ()
         | _ ->
           Mpd.entity_free e;
