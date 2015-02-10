@@ -30,12 +30,14 @@ type weight = float (* ∈ [0, 1] *)
 type genres = (string, weight) Map.t
 type albums = string Set.t
 
-type music_library =
-  int * (* nombre total d'albums *)
-  (artist,
-   int (* nombre d'albums *)
-   * genres)
-  Hashtbl.t
+type music_library = {
+  mutable albums_nb: int;
+  table: (artist,
+          albums
+          * genres)
+      Hashtbl.t;
+}
+
 
 val create_library : unit -> music_library
 val library_add_infos : music_library -> (artist * albums * genres) list
