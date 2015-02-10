@@ -4,46 +4,57 @@
 (** This module defines the default template for application pages *)
 
 {shared{
-  open Eliom_content.Html5
-  open Eliom_content.Html5.F
+open Eliom_content.Html5
+open Eliom_content.Html5.F
 }}
 
 let uploader = Eba_userbox.uploader !Wdmproject_config.avatar_dir
 
-{client{
-let user_menu user uploader =
-  [
-    p [pcdata "Change your password:"];
-    Eba_view.password_form ();
-    hr ();
-    Eba_userbox.upload_pic_link uploader;
-    hr ();
-    Eba_userbox.reset_tips_link ();
-    hr ();
-    Eba_view.disconnect_button ();
-  ]
+    {client{
+       let user_menu user uploader =
+         [
+           p [pcdata "Change your password:"];
+           Eba_view.password_form ();
+           hr ();
+           Eba_userbox.upload_pic_link uploader;
+           hr ();
+           Eba_userbox.reset_tips_link ();
+           hr ();
+           Eba_view.disconnect_button ();
+         ]
 
 let _ = Eba_userbox.set_user_menu user_menu
- }}
+}}
 
 let header ?user () =
   lwt user_box = Eba_userbox.userbox user uploader in
   lwt () = Wdmproject_tips.example_tip () in
   Lwt.return
     (div ~a:[a_id "wdmproject-header"] [
-      a ~a:[a_id "wdmproject-logo"]
-        ~service:Eba_services.main_service [
-          pcdata Wdmproject_base.App.application_name;
-        ] ();
-      ul ~a:[a_id "wdmproject-navbar"]
-        [
-          li [a ~service:Eba_services.main_service
-                [pcdata "Home"] ()];
-          li [a ~service:Wdmproject_services.about_service
-                [pcdata "About"] ()]
-        ];
-      user_box;
-    ])
+       a ~a:[a_id "wdmproject-logo"]
+         ~service:Eba_services.main_service [
+         pcdata Wdmproject_base.App.application_name;
+       ] ();
+       ul ~a:[a_id "wdmproject-navbar"]
+         (match user with
+          | None ->
+            [
+              li [a ~service:Eba_services.main_service
+                    [pcdata "Home"] ()];
+              li [a ~service:Wdmproject_services.about_service
+                    [pcdata "About"] ()]
+            ]
+          | _ ->
+            [
+              li [a ~service:Eba_services.main_service
+                    [pcdata "Home"] ()];
+              li [a ~service:Wdmproject_services.about_service
+                    [pcdata "About"] ()];
+              li [a ~service:Wdmproject_services.concert_service
+                    [pcdata "Concert"] ()]
+            ]);
+       user_box;
+     ])
 
 let footer ?user () =
   div ~a:[a_id "wdmproject-footer"] [
@@ -80,9 +91,10 @@ let connected_welcome_box () =
      ])
 
 let page userid_o content =
-  lwt user = match userid_o with None -> Lwt.return None
+  lwt user = match userid_o with
+    | None -> Lwt.return None
     | Some userid -> lwt u = Eba_user.user_of_userid userid in
-                  Lwt.return (Some u)
+      Lwt.return (Some u)
   in
   let l =
     [ div ~a:[a_id "wdmproject-body"] content;
@@ -93,6 +105,6 @@ let page userid_o content =
   Lwt.return
     (h
      ::match user with
-       | Some user when (not (Eba_user.is_complete user)) ->
-         connected_welcome_box () :: l
-       | _ -> l)
+     | Some user when (not (Eba_user.is_complete user)) ->
+       connected_welcome_box () :: l
+     | _ -> l)
