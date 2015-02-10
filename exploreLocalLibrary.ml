@@ -1,4 +1,5 @@
 open Batteries
+open Defs
 
 let (^/) = Filename.concat
 
@@ -29,7 +30,7 @@ let explore_directory (dir: string) =
 
   Enum.from_loop ([""], []) aux
   
-let stats (library: string): (string * int) list =
+let stats (library: string): (artist * albums) list =
   let artists = Hashtbl.create 37 in
   let add_album artist album =
     try
