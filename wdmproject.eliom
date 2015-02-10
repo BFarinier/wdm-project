@@ -44,6 +44,33 @@ let concert_handler userid_o () () =
   |> Wdmproject_container.page userid_o
 
 
+let parameter_handler userid_o () () =
+  Wdmproject_container.page userid_o [
+    div [
+      h2 [pcdata "Local library"];
+      p [
+        pcdata "Import";
+        raw_input ~input_type:`Text ~name:"import" ();
+        raw_input ~input_type:`Submit ~value:"Ok" ()
+      ]];
+    div [
+      h2 [pcdata "MPD server"];
+      p [
+        pcdata "Adress";
+        raw_input ~input_type:`Text ~name:"adress" ();
+        pcdata "Port";
+        raw_input ~input_type:`Text ~name:"port" ();
+        raw_input ~input_type:`Submit ~value:"Rescan" ()
+      ]];
+    div [
+      h2 [pcdata "Facebook"];
+      p [
+        pcdata "Facebook account";
+        raw_input ~input_type:`Text ~name:"account" ();
+        raw_input ~input_type:`Submit ~value:"update" ()
+      ]]
+  ]  
+
 let () =
   Wdmproject_base.App.register
     Eba_services.main_service
@@ -55,4 +82,8 @@ let () =
 
   Wdmproject_base.App.register
     Wdmproject_services.concert_service
-    (Wdmproject_page.Opt.connected_page concert_handler)
+    (Wdmproject_page.Opt.connected_page concert_handler);
+
+  Wdmproject_base.App.register
+    Wdmproject_services.parameter_service
+    (Wdmproject_page.Opt.connected_page parameter_handler)

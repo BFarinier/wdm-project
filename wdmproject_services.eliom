@@ -12,3 +12,13 @@ let concert_service =
   Eliom_service.App.service
     ~path:["concert"]
     ~get_params:unit ()
+
+let parameter_fallback =
+  Eliom_service.App.service
+    ~path:["paramter"]
+    ~get_params:unit ()
+
+let parameter_service =
+  Eliom_service.App.post_service
+    ~fallback:parameter_fallback
+    ~post_params:unit ()
