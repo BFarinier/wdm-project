@@ -3,11 +3,6 @@
 
 open Eliom_parameter
 
-let about_service =
-  Eliom_service.App.service
-    ~path:["about"]
-    ~get_params:unit ()
-
 let concert_service =
   Eliom_service.App.service
     ~path:["concert"]

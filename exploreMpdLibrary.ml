@@ -241,7 +241,6 @@ let get_stats conn =
   loop ();
 
   Hashtbl.enum artists
-  |> Enum.map (Tuple2.map2 Set.cardinal)
   |> List.of_enum
 
 let stats ?(port = 6600) host =
