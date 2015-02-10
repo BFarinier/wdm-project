@@ -53,12 +53,8 @@ let make_request (index: 'a searches) (tag: 'a) ?(limit=25) ?(offset=0) str : st
            else [])))
 
 
-let get_stream (frame: Ocsigen_http_frame.t) : string Lwt_stream.t =
-  let stream = ref
-      (match frame.Ocsigen_http_frame.frame_content with
-       | None -> raise Not_found
-       | Some s -> Ocsigen_stream.get s)
-  in
+let get_stream (frame: string Ocsigen_stream.t) : string Lwt_stream.t =
+  let stream = ref (Ocsigen_stream.get frame) in
   let rec aux () =
     Ocsigen_stream.next (!stream) >>= function
     | Ocsigen_stream.Finished None -> Lwt.return None
@@ -102,13 +98,20 @@ module Xml_tree = struct
   let get_xml (index: 'a searches) (tag: 'a) ?(limit=25) ?(offset=0) str : t Lwt.t =
     let url = make_request index tag ~limit ~offset str in
     Ocsigen_http_client.get_url url >>= fun frame ->
-    let stream = get_stream frame in
-    let input = Xmlm.make_input (`Fun (read_stream stream)) in
-    let el tag childs = Element (tag, childs)  in
-    let data d = Data d in
-    Lwt.return
-      (try snd (Xmlm.input_doc_tree ~el ~data input) with
-         Xmlm.Error (pos, error) -> raise Not_found)
+    match frame.Ocsigen_http_frame.frame_content with
+    | None -> raise Not_found
+    | Some frame ->
+      let stream = get_stream frame in
+      let input = Xmlm.make_input (`Fun (read_stream stream)) in
+      let el tag childs = Element (tag, childs)  in
+      let data d = Data d in
+      try_lwt
+        let t = snd (Xmlm.input_doc_tree ~el ~data input) in
+        Ocsigen_stream.finalize frame `Success
+        >>= fun () -> Lwt.return t
+      with Xmlm.Error (pos, error) ->
+        Ocsigen_stream.finalize frame `Failure
+        >>= fun () -> Lwt.fail Not_found
 
 end
 
