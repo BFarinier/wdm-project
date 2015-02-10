@@ -107,3 +107,7 @@ let search (search: 'a searches) (tag: 'a) (str: string) : string list Lwt.t =
   >>= function
   | Some mid -> get_tag search tag mid
   | None -> Lwt.return []
+
+let search_artist_tags (artist: string) =
+  search Artist `Genre artist >|=
+  List.map (fun tag -> (1, tag))

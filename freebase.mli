@@ -13,3 +13,5 @@ val tags_to_string : [< tags] -> string
 val searches_to_string : 'a searches -> string
 
 val search : 'a searches -> ([< tags] as 'a) -> string -> string list Lwt.t
+
+val search_artist_tags : string -> (int * string) list Lwt.t
