@@ -4,7 +4,109 @@
 {shared{
 open Eliom_content.Html5
 open Eliom_content.Html5.F
+open Lwt
 }}
+
+open Defs
+
+type settings = {
+  lieu: query_lieu list;
+}
+
+let default_settings = { lieu = [Ville "toulouse"] }
+
+type user_data = {
+  settings: settings;
+  selected_concerts: concert list;
+  library: music_library;
+}
+
+let db = Ocsipersist.open_table Wdmproject_config.db_name
+
+let get_user_data userid =
+  let userid = Int64.to_string userid in
+  Lwt.catch
+    (fun () -> Ocsipersist.find db userid)
+    (fun _ ->
+       let data = {
+         settings = default_settings;
+         selected_concerts = [];
+         library = create_library ();
+       } in
+       Ocsipersist.add db userid data >>= fun () ->
+       Lwt.return data)
+
+let set_user_data userid data =
+  Ocsipersist.add db (Int64.to_string userid) data
+
+let concerts_event_h = Hashtbl.create 37
+let concerts_event userid =
+  try Hashtbl.find concerts_event_h userid with
+    Not_found ->
+    let e, send_e = React.E.create () in
+    let e = Eliom_react.Down.of_react e in
+    Hashtbl.add concerts_event_h userid (e, send_e);
+    e, send_e
+
+(* meh *)
+let concerts_to_client : concert list -> (string * (string * string) * string) list =
+  List.map (fun {artiste; lieu; date} ->
+    (artiste,
+     lieu,
+     CalendarLib.Printer.Calendar.to_string date))
+
+let update_concerts userid =
+  lwt user_data = get_user_data userid in
+  lwt l = Lwt_list.map_p (fun lieu -> InfoConcert.get ~lieu ())
+    user_data.settings.lieu in
+  lwt concerts = List.flatten l
+    |> List.sort_uniq compare
+    |> Lwt_list.map_p (fun concert ->
+      lwt tags = Freebase.search_artist_tags concert.artiste in
+      let genres = genres_of_taglist tags in
+      let ((matching_artist, score), global_score) =
+        Core.rank genres user_data.library in
+
+      {
+        artiste = Printf.sprintf "%s - (%s, %f) / %f"
+            concert.artiste matching_artist score global_score;
+        lieu = concert.lieu;
+        date = concert.date
+      } |> Lwt.return) in
+  let _, send_e = concerts_event userid in
+  send_e (concerts_to_client concerts);
+  Lwt.return ()
+
+{shared{
+  type update_concerts_rpc = (int64) deriving(Json)
+ }}
+
+{client{
+   let build_concerts_table btn concerts =
+     let alternate =
+       let switch = ref true in
+       fun (artiste, lieu, date) ->
+         switch := not (!switch);
+         let lieu = Printf.sprintf "%s (%s)" (fst lieu) (snd lieu) in
+         div
+           ~a:[a_id (if (!switch) then "concert_odd" else "concert_even")]
+           [h2 [pcdata artiste];
+            p [pcdata ("le " ^ date ^ " à " ^ lieu)]]
+     in
+     concerts
+     |> List.map alternate
+     |> (fun l ->
+       div [
+          table (List.map (fun elt -> tr [td [elt]]) l);
+          btn
+        ])
+
+   let update_concerts_rpc = %(server_function Json.t<update_concerts_rpc> update_concerts)
+   let update_concerts userid _ =
+     Lwt.async (fun () ->
+       update_concerts_rpc userid
+     )
+ }}
 
 let main_service_handler userid_o () () =
   Wdmproject_container.page userid_o (
@@ -14,24 +116,23 @@ let main_service_handler userid_o () () =
   )
 
 let concert_handler userid_o () () =
-  let construct =
-    let switch = ref true in
-    fun name date place ->
-      switch := not (!switch);
-      div
-        ~a:[a_id (if (!switch) then "concert_odd" else "concert_even")]
-        [h2 [pcdata name]; p [pcdata ("le "^date^" à "^place)]]
-  in
-  [("Allemagne", "25 mars 1957", "Berlin");
-   ("Belgique", "25 mars 1957", "Bruxelles");
-   ("France", "25 mars 1957", "Paris");
-   ("Italie", "25 mars 1957", "Rome");
-   ("Luxembourg", "25 mars 1957", "Luxembourg");
-   ("Pays-Bas", "25 mars 1957", "Amsterdam")]
-  |> List.fold_left (fun acc (name, date, place) -> (construct name date place)::acc) []
-  |> (fun l -> [div (List.rev ((button ~button_type:`Button [pcdata "Refresh"])::l))])
-  |> Wdmproject_container.page userid_o
+  match userid_o with
+  | None -> Wdmproject_container.page userid_o []
+  | Some userid ->
+    lwt user_data = get_user_data userid in
+    let concerts_e, _ = concerts_event userid in
+    let initial_concerts = user_data.selected_concerts
+                           |> concerts_to_client in
+        
+    let btn = D.button ~button_type:`Button
+        ~a:[a_onclick {{ update_concerts %userid }}]
+        [pcdata "Update"] in
 
+    Wdmproject_container.page userid_o [
+      C.node {{ R.node (React.S.map (build_concerts_table %btn)
+                          (%concerts_e |> React.S.hold %initial_concerts))
+              }};
+    ]
 
 let parameter_handler userid_o () () =
   Wdmproject_container.page userid_o [

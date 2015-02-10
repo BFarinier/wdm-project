@@ -41,4 +41,4 @@ type music_library = {
 
 val create_library : unit -> music_library
 val library_add_infos : music_library -> (artist * albums * genres) list -> unit
-val genres_of_taglist : (string * int) list -> genres
+val genres_of_taglist : (int * string) list -> genres

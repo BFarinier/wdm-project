@@ -19,3 +19,5 @@ let avatars = Ocsigen_extensions.Configuration.(
 )
 
 let _ = Eliom_config.parse_config [avatars]
+
+let db_name = "library_db"

@@ -5,7 +5,7 @@
 PROJECT_NAME := wdmproject
 
 # Source files for the server
-SERVER_FILES := $(wildcard *.eliomi *.eliom *.ml)
+SERVER_FILES := $(wildcard *.eliomi *.eliom *.ml *.mli)
 # Source files for the client
 CLIENT_FILES := $(wildcard *.eliomi *.eliom)
 

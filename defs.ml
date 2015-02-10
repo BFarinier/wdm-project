@@ -140,8 +140,9 @@ let library_add_infos lib (artists: (artist * albums * genres) list) =
       Hashtbl.add lib.table artist (albums, genres)
   ) artists
 
-let genres_of_taglist (tags: (string * int) list): genres =
-  let tot = List.enum tags |> Enum.map snd |> Enum.fold (+) 0 in
+let genres_of_taglist (tags: (int * string) list): genres =
+  let tot = List.enum tags |> Enum.map fst |> Enum.fold (+) 0 in
   List.enum tags
-  |> Enum.map (Tuple2.map2 (fun n -> (Float.of_int n) /. (Float.of_int tot)))
+  |> Enum.map (Tuple2.map1 (fun n -> (Float.of_int n) /. (Float.of_int tot)))
+  |> Enum.map Tuple2.swap
   |> Map.of_enum
