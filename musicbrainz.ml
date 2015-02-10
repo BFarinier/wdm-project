@@ -41,7 +41,7 @@ let searches_to_string : type a. a searches -> string = function
   | Tag -> "tag"
 
 let make_request (index: 'a searches) (tag: 'a) ?(limit=25) ?(offset=0) str : string =
-  Printf.sprintf "http://musicbrainz.org/ws/2/%s/?%s"
+  Printf.sprintf "http://musicbrainz.hotbeverage.org/ws/2/%s/?%s"
     (searches_to_string index)
     (Ocsigen_lib.Url.make_encoded_parameters
        (["query", (tags_to_string tag)^":"^str]
@@ -52,42 +52,44 @@ let make_request (index: 'a searches) (tag: 'a) ?(limit=25) ?(offset=0) str : st
            then ["offset", string_of_int offset]
            else [])))
 
-let get_strings (url: string) : string list Lwt.t =
-  let rec aux acc stream =
-    Ocsigen_stream.next stream >>= function
-    | Ocsigen_stream.Finished None -> Lwt.return (List.rev acc)
-    | Ocsigen_stream.Finished (Some stream) -> aux acc stream
-    | Ocsigen_stream.Cont (x, stream) -> aux (x::acc) stream
-  in
-  Ocsigen_http_client.get_url url >>= fun frame ->
-  match frame.Ocsigen_http_frame.frame_content with
-  | None -> raise Not_found
-  | Some s ->
-    let l = aux [] (Ocsigen_stream.get s) in
-    lwt _ = Ocsigen_stream.finalize s `Success in l
 
-let iter_strings (strings: string list) : unit -> int =
-  let length, string =
-    match strings with
-    | [] -> (ref 0, ref "")
-    | s::_ -> (ref (String.length s), ref s)
+let get_stream (frame: Ocsigen_http_frame.t) : string Lwt_stream.t =
+  let stream = ref
+      (match frame.Ocsigen_http_frame.frame_content with
+       | None -> raise Not_found
+       | Some s -> Ocsigen_stream.get s)
   in
-  let strings = ref strings in
+  let rec aux () =
+    Ocsigen_stream.next (!stream) >>= function
+    | Ocsigen_stream.Finished None -> Lwt.return None
+    | Ocsigen_stream.Finished (Some s) -> stream := s; aux ()
+    | Ocsigen_stream.Cont (x, s) -> stream := s; Lwt.return (Some x)
+  in
+  Lwt_stream.from aux
+
+
+let read_stream ?(limit=16) (stream: string Lwt_stream.t) : unit -> int =
+  Lwt_stream.on_terminate stream (fun () -> raise End_of_file);
+  let length = ref 0 in
+  let string = ref "" in
   let pos = ref 0 in
+  let compt = ref limit in
   let rec aux = fun () ->
     if (!pos) < (!length) then
       let char = String.get (!string) (!pos) in
-      (incr pos; Printf.printf "%c%!" char; int_of_char char)
-    else match (!strings) with
-      | [] -> raise End_of_file
-      | s::l -> (
-          strings := l;
-          string := s;
-          length := String.length s;
-          pos := 0;
-          aux ()
-        )
+      (incr pos; int_of_char char)
+    else
+      match Lwt_stream.get_available_up_to 1 stream with
+      | [s] ->
+        string := s;
+        length := String.length s;
+        pos := 0;
+        aux ()
+      | _ ->
+        if (!compt <= 0) then raise Not_found
+        else (decr compt; aux ())
   in aux
+
 
 module Xml_tree = struct
 
@@ -97,19 +99,16 @@ module Xml_tree = struct
 
   type t = Element of tag * t list | Data of string
 
-  let tree_of_strings (strings: string list) : t =
-    let input = Xmlm.make_input (`Fun (iter_strings strings)) in
+  let get_xml (index: 'a searches) (tag: 'a) ?(limit=25) ?(offset=0) str : t Lwt.t =
+    let url = make_request index tag ~limit ~offset str in
+    Ocsigen_http_client.get_url url >>= fun frame ->
+    let stream = get_stream frame in
+    let input = Xmlm.make_input (`Fun (read_stream stream)) in
     let el tag childs = Element (tag, childs)  in
     let data d = Data d in
-    try snd (Xmlm.input_doc_tree ~el ~data input) with
-      Xmlm.Error (pos, error) ->
-      print_endline (Printf.sprintf "(%i, %i), %s" (fst pos) (snd pos) (Xmlm.error_message error));
-      assert false
-
-  let get_xml (index: 'a searches) (tag: 'a) ?(limit=25) ?(offset=0) str : t Lwt.t =
-    make_request index tag ~limit ~offset str
-    |> get_strings
-    >|= tree_of_strings
+    Lwt.return
+      (try snd (Xmlm.input_doc_tree ~el ~data input) with
+         Xmlm.Error (pos, error) -> raise Not_found)
 
 end
 
@@ -140,5 +139,8 @@ let rec extract_tag =
   | Data _ -> []
 
 let search_artist_tags (artist:string) : (int * string) list Lwt.t =
-  Xml_tree.get_xml Artist `Artist ~limit:1 artist
-  >|= extract_tag
+  try
+    Xml_tree.get_xml Artist `Artist ~limit:1 artist
+    >|= extract_tag
+  with
+    Not_found -> Lwt.return []
