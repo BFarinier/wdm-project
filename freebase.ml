@@ -57,7 +57,13 @@ let make_query_request (search: 'a searches) (tag: 'a) ((Mid mid): 'a mid) : str
   let tag = tags_to_string tag in
   Printf.sprintf "https://www.googleapis.com/freebase/v1/mqlread?%s"
     (Ocsigen_lib.Url.make_encoded_parameters
-       ["query", Printf.sprintf "{\"type\":\"/music/%s\", \"mid\":\"%s\", \"/music/%s/%s\":[]}" search mid search tag])
+       ["query", 
+        `O [
+          "type", `String ("/music/" ^ search);
+          "mid", `String mid;
+          ("/music/" ^ search ^ "/" ^ tag), `A []
+        ] |> Ezjsonm.to_string
+       ])
 
 let get_string (url: string) : string Lwt.t =
   let buff = Buffer.create 256 in
