@@ -74,18 +74,30 @@ let get_string (url: string) : string Lwt.t =
     let l = aux (Ocsigen_stream.get s) in
     lwt _ = Ocsigen_stream.finalize s `Success in l
 
-let get_mid (search: 'a searches) str : 'a mid Lwt.t =
-  make_search_request search str |> get_string
-  >|= Ezjsonm.from_string >|= Ezjsonm.value
-  >|= (fun v -> Ezjsonm.find v ["result"])
-  >|= Ezjsonm.get_list (fun v -> Ezjsonm.find v ["mid"])
-  >|= (function [] -> Ezjsonm.string "" | a::l -> a)
-  >|= Ezjsonm.get_string
-  >|= fun mid -> Mid mid
+let get_mid (search: 'a searches) str : 'a mid option Lwt.t =
+  try_lwt
+    make_search_request search str |> get_string
+    >|= Ezjsonm.from_string >|= Ezjsonm.value
+    >|= (fun v -> Ezjsonm.find v ["result"])
+    >|= Ezjsonm.get_list (fun v -> Ezjsonm.find v ["mid"])
+    >|= (function [] -> Ezjsonm.string "" | a::l -> a)
+    >|= Ezjsonm.get_string
+    >|= fun mid -> Some (Mid mid)
+  with
+    Not_found | Ezjsonm.Parse_error _ -> Lwt.return None
 
-let get_tag_from_mid (search: 'a searches) (tag: 'a) (mid: 'a mid) : string list Lwt.t =
-  make_query_request search tag mid |> get_string
-  >|= Ezjsonm.from_string >|= Ezjsonm.value
-  >|= (let path = Printf.sprintf "/music/%s/%s" (searches_to_string search) (tags_to_string tag) in
-       fun v -> Ezjsonm.find v ["result"; path])
-  >|= Ezjsonm.get_list Ezjsonm.get_string
+let get_tag (search: 'a searches) (tag: 'a) (mid: 'a mid) : string list Lwt.t =
+  let path = Printf.sprintf "/music/%s/%s" (searches_to_string search) (tags_to_string tag) in
+  try_lwt
+    make_query_request search tag mid |> get_string
+    >|= Ezjsonm.from_string >|= Ezjsonm.value
+    >|= (fun v -> Ezjsonm.find v ["result"; path])
+    >|= Ezjsonm.get_list Ezjsonm.get_string
+  with
+    Not_found | Ezjsonm.Parse_error _ -> Lwt.return []
+
+let search (search: 'a searches) (tag: 'a) (str: string) : string list Lwt.t =
+  get_mid search str
+  >>= function
+  | Some mid -> get_tag search tag mid
+  | None -> Lwt.return []
