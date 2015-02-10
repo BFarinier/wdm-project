@@ -13,17 +13,6 @@ let main_service_handler userid_o () () =
     ]
   )
 
-let about_handler userid_o () () =
-  Wdmproject_container.page userid_o [
-    div [
-      p [pcdata "This template provides a skeleton \
-                 for an Ocsigen application."];
-      hr ();
-      p [pcdata "Feel free to modify the generated code and use it \
-                 or redistribute it as you want."]
-    ]
-  ]
-
 let concert_handler userid_o () () =
   let construct =
     let switch = ref true in
@@ -48,10 +37,6 @@ let () =
   Wdmproject_base.App.register
     Eba_services.main_service
     (Wdmproject_page.Opt.connected_page main_service_handler);
-
-  Wdmproject_base.App.register
-    Wdmproject_services.about_service
-    (Wdmproject_page.Opt.connected_page about_handler);
 
   Wdmproject_base.App.register
     Wdmproject_services.concert_service

@@ -10,25 +10,24 @@ open Eliom_content.Html5.F
 
 let uploader = Eba_userbox.uploader !Wdmproject_config.avatar_dir
 
-    {client{
-       let user_menu user uploader =
-         [
-           p [pcdata "Change your password:"];
-           Eba_view.password_form ();
-           hr ();
-           Eba_userbox.upload_pic_link uploader;
-           hr ();
-           Eba_userbox.reset_tips_link ();
-           hr ();
-           Eba_view.disconnect_button ();
-         ]
+{client{
+   let user_menu user uploader =
+     [
+       p [pcdata "Change your password:"];
+       Eba_view.password_form ();
+       hr ();
+       Eba_userbox.upload_pic_link uploader;
+       hr ();
+       Eba_userbox.reset_tips_link ();
+       hr ();
+       Eba_view.disconnect_button ();
+     ]
 
-let _ = Eba_userbox.set_user_menu user_menu
+  let _ = Eba_userbox.set_user_menu user_menu
 }}
 
 let header ?user () =
   lwt user_box = Eba_userbox.userbox user uploader in
-  lwt () = Wdmproject_tips.example_tip () in
   Lwt.return
     (div ~a:[a_id "wdmproject-header"] [
        a ~a:[a_id "wdmproject-logo"]
@@ -41,15 +40,11 @@ let header ?user () =
             [
               li [a ~service:Eba_services.main_service
                     [pcdata "Home"] ()];
-              li [a ~service:Wdmproject_services.about_service
-                    [pcdata "About"] ()]
             ]
           | _ ->
             [
               li [a ~service:Eba_services.main_service
                     [pcdata "Home"] ()];
-              li [a ~service:Wdmproject_services.about_service
-                    [pcdata "About"] ()];
               li [a ~service:Wdmproject_services.concert_service
                     [pcdata "Concert"] ()]
             ]);
@@ -58,15 +53,7 @@ let header ?user () =
 
 let footer ?user () =
   div ~a:[a_id "wdmproject-footer"] [
-    pcdata "This application has been generated using the ";
-    a ~service:Eba_services.eba_github_service [
-      pcdata "Eliom-base-app"
-    ] ();
-    pcdata " template for Eliom-distillery and uses the ";
-    a ~service:Eba_services.ocsigen_service [
-      pcdata "Ocsigen"
-    ] ();
-    pcdata " technology.";
+    pcdata "\\_o< λ λ λ";
   ]
 
 let connected_welcome_box () =
