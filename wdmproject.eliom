@@ -188,7 +188,7 @@ let update_mpd_library (userid, address, port) =
        (match ok with
         | false -> mpd_status_s "Error"
         | true -> mpd_status_s "Done!");
-       lwt () = Lwt_js.sleep 3. in
+       lwt () = Lwt_js.sleep 5. in
        mpd_status_s "";
        Lwt.return ()
      )
