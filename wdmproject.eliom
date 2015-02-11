@@ -60,7 +60,10 @@ let update_concerts userid =
   lwt l = Lwt_list.map_p (fun lieu -> InfoConcert.get ~lieu ())
     user_data.settings.lieu in
   lwt concerts = List.flatten l
-    |> List.sort_uniq compare
+    |> List.sort_uniq (fun c1 c2 ->
+      let res = CalendarLib.Calendar.compare c1.date c2.date in
+      if res <> 0 then res
+      else compare c1 c2)
     |> Lwt_list.map_p (fun concert ->
       lwt tags = Freebase.search_artist_tags concert.artiste in
       let genres = genres_of_taglist tags in
@@ -75,7 +78,7 @@ let update_concerts userid =
       } |> Lwt.return) in
   let _, send_e = concerts_event userid in
   send_e (concerts_to_client concerts);
-  Lwt.return ()
+  set_user_data userid {user_data with selected_concerts = concerts}
 
 {shared{
   type update_concerts_rpc = (int64) deriving(Json)
@@ -97,8 +100,8 @@ let update_concerts userid =
      |> List.map alternate
      |> (fun l ->
        div [
-          table (List.map (fun elt -> tr [td [elt]]) l);
-          btn
+         btn;
+         table (List.map (fun elt -> tr [td [elt]]) l);
         ])
 
    let update_concerts_rpc = %(server_function Json.t<update_concerts_rpc> update_concerts)

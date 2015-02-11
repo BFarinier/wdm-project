@@ -40,6 +40,11 @@ let searches_to_string : type a. a searches -> string = function
   | Album -> "album"
   | Genre -> "genre"
 
+let (set_key, get_key) =
+  let key = ref None in
+  (fun (f: unit -> string) () -> key := Some (f ())),
+  (fun () -> !key)
+
 let make_search_request (search: 'a searches) ?(limit=25) ?(offset=0) str : string =
   let search = searches_to_string search in
   Printf.sprintf "https://www.googleapis.com/freebase/v1/search?%s"
@@ -50,20 +55,25 @@ let make_search_request (search: 'a searches) ?(limit=25) ?(offset=0) str : stri
            else [])
         @ (if (offset > 0)
            then ["offset", string_of_int offset]
-           else [])))
+           else [])
+        @ (match get_key () with
+          | Some key -> ["key", key]
+          | None -> [])))
 
 let make_query_request (search: 'a searches) (tag: 'a) ((Mid mid): 'a mid) : string =
   let search = searches_to_string search in
   let tag = tags_to_string tag in
   Printf.sprintf "https://www.googleapis.com/freebase/v1/mqlread?%s"
     (Ocsigen_lib.Url.make_encoded_parameters
-       ["query", 
-        `O [
-          "type", `String ("/music/" ^ search);
-          "mid", `String mid;
-          ("/music/" ^ search ^ "/" ^ tag), `A []
-        ] |> Ezjsonm.to_string
-       ])
+       (["query", 
+         `O [
+           "type", `String ("/music/" ^ search);
+           "mid", `String mid;
+           ("/music/" ^ search ^ "/" ^ tag), `A []
+         ] |> Ezjsonm.to_string]
+        @ (match get_key () with
+          | Some key -> ["key", key]
+          | None -> [])))
 
 let get_string (url: string) : string Lwt.t =
   let buff = Buffer.create 256 in
