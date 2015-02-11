@@ -10,3 +10,9 @@
 #require "calendar";;
 #load "lwt_ops.cmo";;
 #load "defs.cmo";;
+#load "freebase.cmo";;
+#load "musicbrainz.cmo";;
+#load "exploreLocalLibrary.cmo";;
+#load "exploreMpdLibrary.cmo";;
+#load "infoConcert.cmo";;
+#load "core.cmo";;
