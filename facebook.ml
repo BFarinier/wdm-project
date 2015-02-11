@@ -18,13 +18,14 @@ let get_string (url: string) : string Lwt.t =
 
 
 
-let log_people_in ~client_id ~redirect_uri =
+let log_people_in ~client_id ~redirect_uri ~userid =
   let s = Printf.sprintf "https://www.facebook.com/dialog/oauth?%s"
       (Ocsigen_lib.Url.make_encoded_parameters
          ["client_id", client_id;
           "redirect_uri",redirect_uri;
           "response_type", "code";
-          "scope", "user_likes"])
+          "scope", "user_likes";
+          "state", userid])
   in Printf.printf "%s\n%!" s; s
 
 let confirme_identity ~client_id ~client_secret ~redirect_uri ~code =

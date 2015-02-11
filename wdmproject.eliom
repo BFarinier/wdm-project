@@ -417,7 +417,7 @@ let parameter_handler userid_o () () =
            (fun () ->
               [pcdata "Account: ";
                raw_input ~input_type:`Submit ~value:"Update" ()]))
-          ()];
+          (match userid_o with Some user -> Int64.to_string user | None -> "")];
       div [
         h2 [pcdata "Données collectées"];
         div [
@@ -427,10 +427,10 @@ let parameter_handler userid_o () () =
       ]
     ]  
 
-let facebook_login_handler () () =
+let facebook_login_handler userid () =
   let open Wdmproject_config in
   let redirect_uri = "http://project.hotbeverage.org/facebook" in
-  Lwt.return (Facebook.log_people_in ~client_id ~redirect_uri)
+  Lwt.return (Facebook.log_people_in ~client_id ~redirect_uri ~userid)
 
 let facebook_success_handler code () =
   let open Wdmproject_config in

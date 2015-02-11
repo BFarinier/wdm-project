@@ -13,10 +13,20 @@ let parameter_service =
     ~path:["parameter"]
     ~get_params:unit ()
 
+let facebook_userid =
+  Eliom_service.App.service
+    ~path:["parameter"]
+    ~get_params:(string "userid") ()
+
 let facebook_login =
   Eliom_service.App.post_service
-    ~fallback:parameter_service
+    ~fallback:facebook_userid
     ~post_params:unit ()
+
+let facebook_login_state =
+  Eliom_service.App.service
+    ~path:["facebook"]
+    ~get_params:(string "code" ** string "state") ()
 
 let facebook_login_success =
   Eliom_service.App.service
