@@ -65,20 +65,13 @@ let get_userid (url: string) : string option Lwt.t =
   with
     Not_found | Ezjsonm.Parse_error _ -> Lwt.return None
 
-let get_music_name ~access_token ~page_id =
-  Ocsigen_lib.Url.encode ("https://graph.facebook.com/v2.2/"^access_token)
-  |> get_string
-  >|= Ezjsonm.from_string >|= Ezjsonm.value
-  >|= (fun v -> Ezjsonm.find v ["name"])
-  >|= Ezjsonm.get_string
-
 let get_user_music ~access_token = 
   try_lwt
     "https://graph.facebook.com/v2.2/me/music?"^access_token
-    |> (fun s -> Printf.printf "%s%!" s; s) |> get_string >|= (fun s -> Printf.printf "%s%!" s; s)
+    |> get_string
     >|= Ezjsonm.from_string >|= Ezjsonm.value
     >|= (fun v -> Ezjsonm.find v ["data"])
     >|= Ezjsonm.get_list (fun v -> Ezjsonm.find v ["name"])
-    >|= List.map Ezjsonm.get_string
+    >|= List.map (fun v -> Ezjsonm.get_string v |> fun s -> Printf.printf "%s\n%!" s; s)
   with
     Not_found | Ezjsonm.Parse_error _ -> Lwt.return []

@@ -437,13 +437,14 @@ let facebook_success_handler code () =
   let redirect_uri = "http://project.hotbeverage.org/facebook" in
   Facebook.confirme_identity ~client_id ~client_secret ~redirect_uri ~code
   >>= fun access_token ->
-  (Printf.printf "%s%!" access_token;
-   if (Str.string_match (Str.regexp "access_token*") access_token 0)
+  (if (Str.string_match (Str.regexp "access_token*") access_token 0)
    then
-     (Printf.printf "\nSuccess!%!\n"; Facebook.get_user_music ~access_token
-      >|= (List.iter (fun s -> Printf.printf "%s%!" s)))
+     (Printf.printf "Facebook identification: success!\n%!";
+     Facebook.get_user_music ~access_token
+      >|= (List.iter (fun s -> Printf.printf "\n%s%!" s)))
    else
-   (Printf.printf "\nFailure...%!\n"; Lwt.fail (Failure access_token)))
+   (Printf.printf "Facebook identification: failure...\n%!";
+   Lwt.fail (Failure access_token)))
   >|= fun () -> Wdmproject_services.parameter_service
 
 let facebook_failure_handler _ () =
