@@ -19,20 +19,22 @@ let get_string (url: string) : string Lwt.t =
 
 
 let log_people_in ~client_id ~redirect_uri =
-  Printf.sprintf "https://www.facebook.com/dialog/oauth?%s"
-    (Ocsigen_lib.Url.make_encoded_parameters
-       ["client_id", client_id;
-        "redirect_uri",redirect_uri;
-        "response_type", "code";
-        "scope", "user_likes"])
+  let s = Printf.sprintf "https://www.facebook.com/dialog/oauth?%s"
+      (Ocsigen_lib.Url.make_encoded_parameters
+         ["client_id", client_id;
+          "redirect_uri",redirect_uri;
+          "response_type", "code";
+          "scope", "user_likes"])
+  in Printf.printf "%s\n%!" s; s
 
 let confirme_identity ~client_id ~client_secret ~redirect_uri ~code =
-  Printf.sprintf "https://graph.facebook.com/oauth/access_token?%s"
-    (Ocsigen_lib.Url.make_encoded_parameters
-       ["client_id", client_id;
-        "client_secret", client_secret;
-        "redirect_uri", redirect_uri;
-        "code", code])
+  let s = Printf.sprintf "https://graph.facebook.com/oauth/access_token?%s"
+      (Ocsigen_lib.Url.make_encoded_parameters
+         ["client_id", client_id;
+          "client_secret", client_secret;
+          "redirect_uri", redirect_uri;
+          "code", code])
+  in Printf.printf "%s\n%!" s; s
 
 let confirme_identity ~client_id ~client_secret ~redirect_uri ~code =
   confirme_identity ~client_id ~client_secret ~redirect_uri ~code
@@ -40,17 +42,19 @@ let confirme_identity ~client_id ~client_secret ~redirect_uri ~code =
 
 
 let client_access_token ~client_id ~client_secret =
-  Printf.sprintf "https://graph.facebook.com/oauth/access_token?%s"
-    (Ocsigen_lib.Url.make_encoded_parameters
-       ["client_id", client_id;
-        "client_secret", client_secret;
-        "grant_type", "client_credentials"])
+  let s = Printf.sprintf "https://graph.facebook.com/oauth/access_token?%s"
+      (Ocsigen_lib.Url.make_encoded_parameters
+         ["client_id", client_id;
+          "client_secret", client_secret;
+          "grant_type", "client_credentials"])
+  in Printf.printf "%s\n%!" s; s
 
 let inspect_access_token ~input_token ~access_token =
-  Printf.sprintf "https://graph.facebook.com/debug_token?%s"
-    (Ocsigen_lib.Url.make_encoded_parameters
-       ["input_token", input_token;
-        "access_token", access_token])
+  let s = Printf.sprintf "https://graph.facebook.com/debug_token?%s"
+      (Ocsigen_lib.Url.make_encoded_parameters
+         ["input_token", input_token;
+          "access_token", access_token])
+  in Printf.printf "%s\n%!" s; s
 
 
 
@@ -72,6 +76,6 @@ let get_user_music ~access_token =
     >|= Ezjsonm.from_string >|= Ezjsonm.value
     >|= (fun v -> Ezjsonm.find v ["data"])
     >|= Ezjsonm.get_list (fun v -> Ezjsonm.find v ["name"])
-    >|= List.map (fun v -> Ezjsonm.get_string v |> fun s -> Printf.printf "%s\n%!" s; s)
+    >|= List.map Ezjsonm.get_string
   with
     Not_found | Ezjsonm.Parse_error _ -> Lwt.return []
