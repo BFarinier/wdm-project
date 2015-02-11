@@ -121,10 +121,7 @@ let update_concerts userid =
                    if res <> 0 then res
                    else compare c1 c2)
                  |> lwt_list_filter_map_p (fun concert ->
-                   Printf.printf "%s: %!" concert.artiste;
                    lwt tags = freebase_cache#find concert.artiste in
-                   List.iter (fun (_, s) -> print_string s; print_string " ") tags;
-                   print_endline "<<";
                    let genres = genres_of_taglist tags in
                    let ((matching_artist, score), global_score) =
                      Core.rank genres user_data.library in
