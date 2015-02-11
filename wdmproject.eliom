@@ -121,10 +121,7 @@ let update_concerts userid =
                    if res <> 0 then res
                    else compare c1 c2)
                  |> lwt_list_filter_map_p (fun concert ->
-                   Printf.printf "%s: %!" concert.artiste;
                    lwt tags = freebase_cache#find concert.artiste in
-                   List.iter (fun (_, s) -> print_string s; print_string " ") tags;
-                   print_endline "<<";
                    let genres = genres_of_taglist tags in
                    let ((matching_artist, score), global_score) =
                      Core.rank genres user_data.library in
@@ -192,11 +189,16 @@ let del_lieu (userid, n) =
   send (lieux_to_client user_data.settings.lieux);
   Lwt.return ()
 
-    {shared{
+let clear_db userid =
+  lwt user_data = get_user_data userid in
+  set_user_data userid {user_data with library = create_library ()}
+
+{shared{
 type update_concerts_rpc = (int64) deriving(Json)
 type update_mpd_library_rpc = (int64 * string * int) deriving(Json)
 type add_lieu_rpc = (int64 * string * string) deriving(Json)
 type del_lieu_rpc = (int64 * int) deriving(Json)
+type clear_db_rpc = (int64) deriving(Json)
 }}
 
 {client{
@@ -290,6 +292,10 @@ let build_lieux_table userid lieux =
       ];
     ]
   ) lieux)
+
+let clear_db_rpc = %(server_function Json.t<clear_db_rpc> clear_db)
+let clear_db userid _ =
+  Lwt.async (fun () -> clear_db_rpc userid)
 }}
 
 let main_service_handler userid_o () () =
@@ -411,7 +417,14 @@ let parameter_handler userid_o () () =
            (fun () ->
               [pcdata "Account: ";
                raw_input ~input_type:`Submit ~value:"Update" ()]))
-          ()]
+          ()];
+      div [
+        h2 [pcdata "Données collectées"];
+        div [
+          button ~button_type:`Button ~a:[a_onclick {{ clear_db %userid }}]
+            [pcdata "Effacer"];
+        ]
+      ]
     ]  
 
 let facebook_login_handler () () =
