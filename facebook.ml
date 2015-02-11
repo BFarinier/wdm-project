@@ -23,7 +23,8 @@ let log_people_in ~client_id ~redirect_uri =
     (Ocsigen_lib.Url.make_encoded_parameters
        ["client_id", client_id;
         "redirect_uri",redirect_uri;
-        "response_type", "code"])
+        "response_type", "code";
+        "scope", "user_likes"])
 
 let confirme_identity ~client_id ~client_secret ~redirect_uri ~code =
   Printf.sprintf "https://graph.facebook.com/oauth/access_token?%s"
