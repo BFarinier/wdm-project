@@ -12,3 +12,8 @@ let parameter_service =
   Eliom_service.App.service
     ~path:["parameter"]
     ~get_params:unit ()
+
+let facebook_service =
+  Eliom_service.App.service
+    ~path:["facebook"]
+    ~get_params:(suffix (string "code")) ()

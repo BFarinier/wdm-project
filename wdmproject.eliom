@@ -414,6 +414,11 @@ let parameter_handler userid_o () () =
       ]]
   ]  
 
+let facebook_handler code () =
+  let redirect_uri = "http://project.hotbeverage.org/facebook" in
+  Facebook.confirme_identity ~client_id ~client_secret ~redirect_uri ~code
+  >>= Facebook.get_user_music  
+
 let () =
   Wdmproject_base.App.register
     Eba_services.main_service
