@@ -4,9 +4,10 @@
 {shared{
 open Eliom_content.Html5
 open Eliom_content.Html5.F
-open Lwt
+open Eliom_lib.Lwt_ops
 }}
 
+open Lwt_ops
 open Batteries
 open Defs
 
@@ -99,7 +100,7 @@ let update_concerts userid =
       let res = CalendarLib.Calendar.compare c1.date c2.date in
       if res <> 0 then res
       else compare c1 c2)
-    |> Lwt_list.map_p (fun concert ->
+    |> lwt_list_filter_map_p (fun concert ->
       Printf.printf "%s: %!" concert.artiste;
       lwt tags = freebase_cache#find concert.artiste in
       List.iter (fun (_, s) -> print_string s; print_string " ") tags;
@@ -108,12 +109,15 @@ let update_concerts userid =
       let ((matching_artist, score), global_score) =
         Core.rank genres user_data.library in
 
-      {
-        artiste = Printf.sprintf "%s - (%s, %f) / %f"
-            concert.artiste matching_artist score global_score;
-        lieu = concert.lieu;
-        date = concert.date
-      } |> Lwt.return) in
+      if Core.filter_score ((matching_artist, score), global_score) then
+        {
+          artiste = Printf.sprintf "%s - (%s, %f) / %f"
+              concert.artiste matching_artist score global_score;
+          lieu = concert.lieu;
+          date = concert.date
+        } |> Option.some |> Lwt.return
+      else Lwt.return None
+  ) in
   let t2 = Unix.gettimeofday () in
   Printf.printf "~> Done. %f\n%!" t2;
   Printf.printf "~> Diff: %f\n%!" (t2 -. t1);

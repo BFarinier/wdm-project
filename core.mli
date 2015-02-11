@@ -4,3 +4,5 @@ val rank: genres (* req artist *)
   -> music_library
   -> (artist * float) (* similarité max (artiste <-> artiste) *)
      * float          (* score de matching global avec les tags de la bibliothèque *)
+
+val filter_score: (artist * float) * float -> bool
