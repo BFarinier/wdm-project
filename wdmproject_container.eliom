@@ -46,7 +46,9 @@ let header ?user () =
               li [a ~service:Eba_services.main_service
                     [pcdata "Home"] ()];
               li [a ~service:Wdmproject_services.concert_service
-                    [pcdata "Concert"] ()]
+                    [pcdata "Concert"] ()];
+              li [a ~service:Wdmproject_services.parameter_service
+                    [pcdata "Paramètres"] ()];
             ]);
        user_box;
      ])
