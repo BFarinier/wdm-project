@@ -381,6 +381,8 @@ let parameter_handler userid_o () () =
         [pcdata "Rescan"]
     in
 
+    let artists_nb = Hashtbl.length user_data.library.table in
+
     Wdmproject_container.page userid_o [
       div [
         h2 [pcdata "Lieux"];
@@ -421,6 +423,7 @@ let parameter_handler userid_o () () =
       div [
         h2 [pcdata "Données collectées"];
         div [
+          pcdata (Printf.sprintf "%d artists " artists_nb);
           button ~button_type:`Button ~a:[a_onclick {{ clear_db %userid }}]
             [pcdata "Effacer"];
         ]
@@ -446,8 +449,10 @@ let facebook_success_handler (code, userid) () =
   (if (Str.string_match (Str.regexp "access_token*") access_token 0)
    then
      (Printf.printf "Facebook identification: success!\n%!";
-     Facebook.get_user_music ~access_token
-      >|= (List.iter (fun s -> Printf.printf "\n%s%!" s)))
+      Facebook.get_user_music ~access_token >>= fun artists ->
+      update_library
+        (Int64.of_string userid)
+        (List.map (fun s -> (s, Set.singleton "")) artists))
    else
    (Printf.printf "Facebook identification: failure...\n%!";
    Lwt.fail (Failure access_token)))
