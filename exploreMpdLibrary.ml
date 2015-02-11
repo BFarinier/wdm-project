@@ -55,7 +55,7 @@ module Mpd = struct
     | Error_Server
 
   let error = view
-      ~read:(fun i -> match Unsigned.UInt32.to_int i with
+      ~read:(fun i -> match Unsigned.UInt.to_int i with
         | 0 -> Error_Success
         | 1 -> Error_OOM
         | 2 -> Error_Argument
@@ -76,8 +76,8 @@ module Mpd = struct
         | Error_Resolver -> 6
         | Error_Malformed -> 7
         | Error_Closed -> 8
-        | Error_Server -> 9 end |> Unsigned.UInt32.of_int)
-      uint32_t
+        | Error_Server -> 9 end |> Unsigned.UInt.of_int)
+      uint
 
   type entity_type =
     | Entity_Type_Unknown
@@ -86,7 +86,7 @@ module Mpd = struct
     | Entity_Type_Playlist
 
   let entity_type = view
-      ~read:(fun i -> match Unsigned.UInt32.to_int i with
+      ~read:(fun i -> match Unsigned.UInt.to_int i with
         | 0 -> Entity_Type_Unknown
         | 1 -> Entity_Type_Directory
         | 2 -> Entity_Type_Song
@@ -95,8 +95,8 @@ module Mpd = struct
         | Entity_Type_Unknown -> 0
         | Entity_Type_Directory -> 1
         | Entity_Type_Song -> 2
-        | Entity_Type_Playlist -> 3 end |> Unsigned.UInt32.of_int)
-      uint32_t
+        | Entity_Type_Playlist -> 3 end |> Unsigned.UInt.of_int)
+      uint
 
   type tag_type =
     | Tag_Unknown
@@ -119,7 +119,7 @@ module Mpd = struct
     | Tag_Count
 
   let tag_type = view
-      ~read:(fun i -> match Unsigned.UInt32.to_int i with
+      ~read:(fun i -> match Unsigned.UInt.to_int i with
         | -1 -> Tag_Unknown
         | 0 -> Tag_Artist
         | 1 -> Tag_Album
@@ -156,8 +156,8 @@ module Mpd = struct
         | Tag_Musicbrainz_Albumid -> 13
         | Tag_Musicbrainz_Albumartistid -> 14
         | Tag_Musicbrainz_trackid -> 15
-        | Tag_Count -> 16 end |> Unsigned.UInt32.of_int)
-      uint32_t
+        | Tag_Count -> 16 end |> Unsigned.UInt.of_int)
+      uint
 
   let connection_new host port timeout =
     foreign ~from:mpd_lib "mpd_connection_new"
@@ -192,9 +192,8 @@ module Mpd = struct
 
   let song_get_tag s typ idx =
     foreign ~from:mpd_lib "mpd_song_get_tag"
-      (song @-> tag_type @-> uint @-> returning string)
+      (song @-> tag_type @-> uint @-> returning string_opt)
       s typ (Unsigned.UInt.of_int idx)
-    |> opt_of_ptr string
 end
 
 (* End of bindings -- *)
@@ -209,44 +208,48 @@ let connection_new ?(port = 6600) host =
 let connection_close = Mpd.connection_free
 
 let get_stats conn =
-  Mpd.send_list_all_meta conn "" |> ignore;
-  let artists = Hashtbl.create 37 in
-  let add_album artist album =
-    try
-      let albums = Hashtbl.find artists artist in
-      Hashtbl.replace artists artist (Set.add album albums)
-    with Not_found ->
-      Hashtbl.replace artists artist (Set.singleton album)
-  in
-  let rec loop () =
-    match Mpd.recv_entity conn with
-    | None -> ()
-    | Some e ->
-      begin match Mpd.entity_get_type e with
-        | Mpd.Entity_Type_Song ->
-          let s = Mpd.entity_get_song e in
-          let (artist, album) = (Mpd.song_get_tag s Mpd.Tag_Artist 0,
-                                 Mpd.song_get_tag s Mpd.Tag_Album 0) in
-          Mpd.entity_free e;
-          (match artist, album with
-           | Some artist, Some album ->
-             add_album artist album
-           | _ -> ());
-          loop ()
-        | _ ->
-          Mpd.entity_free e;
-          loop ()
-      end
-  in
-  loop ();
+  if Mpd.send_list_all_meta conn "" = false then
+    None
+  else begin
+    let artists = Hashtbl.create 37 in
+    let add_album artist album =
+      try
+        let albums = Hashtbl.find artists artist in
+        Hashtbl.replace artists artist (Set.add album albums)
+      with Not_found ->
+        Hashtbl.replace artists artist (Set.singleton album)
+    in
+    let rec loop () =
+      match Mpd.recv_entity conn with
+      | None -> ()
+      | Some e ->
+        begin match Mpd.entity_get_type e with
+          | Mpd.Entity_Type_Song ->
+            let s = Mpd.entity_get_song e in
+            let (artist, album) = (Mpd.song_get_tag s Mpd.Tag_Artist 0,
+                                   Mpd.song_get_tag s Mpd.Tag_Album 0) in
+            Mpd.entity_free e;
+            (match artist, album with
+             | Some artist, Some album ->
+               add_album artist album
+             | _ -> ());
+            loop ()
+          | _ ->
+            Mpd.entity_free e;
+            loop ()
+        end
+    in
+    loop ();
 
-  Hashtbl.enum artists
-  |> List.of_enum
+    Hashtbl.enum artists
+    |> List.of_enum
+    |> Option.some
+  end
 
 let stats ?(port = 6600) host =
   match connection_new ~port host with
   | None -> None
   | Some conn ->
     let stats = get_stats conn in
-    connection_close conn;
-    Some stats
+    Option.may (fun _ -> connection_close conn) stats;
+    stats
