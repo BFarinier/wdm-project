@@ -427,9 +427,10 @@ let facebook_success_handler code () =
   (Printf.printf "%s%!" access_token;
    if (Str.string_match (Str.regexp "access_token*") access_token 0)
    then
-     (Facebook.get_user_music ~access_token
+     (Printf.printf "\nSuccess!%!\n"; Facebook.get_user_music ~access_token
       >|= (List.iter (fun s -> Printf.printf "%s%!" s)))
-   else Lwt.fail (Failure access_token))
+   else
+   (Printf.printf "\nFailure...%!\n"; Lwt.fail (Failure access_token)))
   >|= fun () -> Wdmproject_services.parameter_service
 
 let facebook_failure_handler _ () =
