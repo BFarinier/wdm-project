@@ -47,7 +47,7 @@ let get_user_data userid =
 let set_user_data userid data =
   Ocsipersist.add db (Int64.to_string userid) data
 
-{shared{
+    {shared{
 type concert_table = [
     `Processing
   | `Table of (string * (string * string) * string) list
@@ -59,7 +59,7 @@ let concerts_event_h:
           (?step:React.step -> concert_table -> unit))
     Hashtbl.t =
   Hashtbl.create 37
-    
+
 let concerts_event userid =
   try Hashtbl.find concerts_event_h userid with
     Not_found ->
@@ -92,32 +92,32 @@ let update_concerts userid =
   Printf.printf "~> Start. %f\n%!" (Unix.gettimeofday ());
 
   lwt l = Lwt_list.map_p (fun lieu -> InfoConcert.get ~lieu ())
-    user_data.settings.lieu in
+      user_data.settings.lieu in
   let t1 = Unix.gettimeofday () in
   Printf.printf "~> InfoConcert done. %f\n%!" t1;
   lwt concerts = List.flatten l
-    |> List.sort_uniq (fun c1 c2 ->
-      let res = CalendarLib.Calendar.compare c1.date c2.date in
-      if res <> 0 then res
-      else compare c1 c2)
-    |> lwt_list_filter_map_p (fun concert ->
-      Printf.printf "%s: %!" concert.artiste;
-      lwt tags = freebase_cache#find concert.artiste in
-      List.iter (fun (_, s) -> print_string s; print_string " ") tags;
-      print_endline "<<";
-      let genres = genres_of_taglist tags in
-      let ((matching_artist, score), global_score) =
-        Core.rank genres user_data.library in
+                 |> List.sort_uniq (fun c1 c2 ->
+                   let res = CalendarLib.Calendar.compare c1.date c2.date in
+                   if res <> 0 then res
+                   else compare c1 c2)
+                 |> lwt_list_filter_map_p (fun concert ->
+                   Printf.printf "%s: %!" concert.artiste;
+                   lwt tags = freebase_cache#find concert.artiste in
+                   List.iter (fun (_, s) -> print_string s; print_string " ") tags;
+                   print_endline "<<";
+                   let genres = genres_of_taglist tags in
+                   let ((matching_artist, score), global_score) =
+                     Core.rank genres user_data.library in
 
-      if Core.filter_score ((matching_artist, score), global_score) then
-        {
-          artiste = Printf.sprintf "%s - (%s, %f) / %f"
-              concert.artiste matching_artist score global_score;
-          lieu = concert.lieu;
-          date = concert.date
-        } |> Option.some |> Lwt.return
-      else Lwt.return None
-  ) in
+                   if Core.filter_score ((matching_artist, score), global_score) then
+                     {
+                       artiste = Printf.sprintf "%s - (%s, %f) / %f"
+                           concert.artiste matching_artist score global_score;
+                       lieu = concert.lieu;
+                       date = concert.date
+                     } |> Option.some |> Lwt.return
+                   else Lwt.return None
+                 ) in
   let t2 = Unix.gettimeofday () in
   Printf.printf "~> Done. %f\n%!" t2;
   Printf.printf "~> Diff: %f\n%!" (t2 -. t1);
@@ -147,59 +147,59 @@ let update_mpd_library (userid, address, port) =
     lwt () = update_library userid infos in
     Lwt.return true
 
-{shared{
-  type update_concerts_rpc = (int64) deriving(Json)
-  type update_mpd_library_rpc = (int64 * string * int) deriving(Json)
- }}
+      {shared{
+type update_concerts_rpc = (int64) deriving(Json)
+type update_mpd_library_rpc = (int64 * string * int) deriving(Json)
+}}
 
 {client{
    let mpd_status, mpd_status_s = React.S.create ""
-   
-   let build_concerts_table concerts =
-     let alternate =
-       let switch = ref true in
-       fun (artiste, lieu, date) ->
-         switch := not (!switch);
-         let lieu = Printf.sprintf "%s (%s)" (fst lieu) (snd lieu) in
-         div
-           ~a:[a_id (if (!switch) then "concert_odd" else "concert_even")]
-           [h2 [pcdata artiste];
-            p [pcdata ("le " ^ date ^ " à " ^ lieu)]]
-     in
-     match concerts with
-     | `Processing ->
-       p [
-         i ~a:[a_id "refresh-logo"; a_class ["fa"; "fa-refresh"; "fa-spin"]] []
-       ]
-     | `Table concerts ->
-       concerts
-       |> List.map alternate
-       |> (fun l ->
-         div [
-           table (List.map (fun elt -> tr [td [elt]]) l);
-         ])
 
-   let update_concerts_rpc = %(server_function Json.t<update_concerts_rpc> update_concerts)
-   let update_concerts userid _ =
-     Lwt.async (fun () ->
-       update_concerts_rpc userid
-     )
+let build_concerts_table concerts =
+  let alternate =
+    let switch = ref true in
+    fun (artiste, lieu, date) ->
+      switch := not (!switch);
+      let lieu = Printf.sprintf "%s (%s)" (fst lieu) (snd lieu) in
+      div
+        ~a:[a_id (if (!switch) then "concert_odd" else "concert_even")]
+        [h2 [pcdata artiste];
+         p [pcdata ("le " ^ date ^ " à " ^ lieu)]]
+  in
+  match concerts with
+  | `Processing ->
+    p [
+      i ~a:[a_id "refresh-logo"; a_class ["fa"; "fa-refresh"; "fa-spin"]] []
+    ]
+  | `Table concerts ->
+    concerts
+    |> List.map alternate
+    |> (fun l ->
+      div [
+        table (List.map (fun elt -> tr [td [elt]]) l);
+      ])
 
-   let update_mpd_library_rpc = %(server_function Json.t<update_mpd_library_rpc> update_mpd_library)
-   let update_mpd_library userid field_host field_port _ =
-     let host = field_host##value |> Js.to_string in
-     let port = field_port##value |> Js.parseInt in
-     Lwt.async (fun () ->
-       mpd_status_s "Processing...";
-       update_mpd_library_rpc (userid, host, port) >|= fun ok ->
-       (match ok with
-        | false -> mpd_status_s "Error"
-        | true -> mpd_status_s "Done!");
-       lwt () = Lwt_js.sleep 5. in
-       mpd_status_s "";
-       Lwt.return ()
-     )
- }}
+let update_concerts_rpc = %(server_function Json.t<update_concerts_rpc> update_concerts)
+let update_concerts userid _ =
+  Lwt.async (fun () ->
+    update_concerts_rpc userid
+  )
+
+let update_mpd_library_rpc = %(server_function Json.t<update_mpd_library_rpc> update_mpd_library)
+let update_mpd_library userid field_host field_port _ =
+  let host = field_host##value |> Js.to_string in
+  let port = field_port##value |> Js.parseInt in
+  Lwt.async (fun () ->
+    mpd_status_s "Processing...";
+    update_mpd_library_rpc (userid, host, port) >|= fun ok ->
+    (match ok with
+     | false -> mpd_status_s "Error"
+     | true -> mpd_status_s "Done!");
+    lwt () = Lwt_js.sleep 5. in
+    mpd_status_s "";
+    Lwt.return ()
+  )
+}}
 
 let main_service_handler userid_o () () =
   Wdmproject_container.page userid_o (
@@ -216,7 +216,7 @@ let concert_handler userid_o () () =
     let concerts_e, _ = concerts_event userid in
     let initial_concerts = `Table (user_data.selected_concerts
                                    |> concerts_to_client) in
-        
+
     let btn = D.button ~button_type:`Button
         ~a:[a_onclick {{ update_concerts %userid }}]
         [pcdata "Update"] in
@@ -247,41 +247,56 @@ let parameter_handler userid_o () () =
                            (To_dom.of_input %mpd_port_input) }}]
         [pcdata "Rescan"]
     in
-  
-  Wdmproject_container.page userid_o [
-    div [
-      h2 [pcdata "Lieux"];
-    ];
-    div [
-      h2 [pcdata "Local library"];
-      p [
-        pcdata "Import: ";
-        raw_input ~input_type:`Text ~name:"import" ();
-        raw_input ~input_type:`Submit ~value:"Ok" ()
-      ]];
-    div [
-      h2 [pcdata "MPD server"];
-      p [
-        pcdata "Address: ";
-        mpd_host_input;
-        pcdata " Port: ";
-        mpd_port_input;
-        mpd_button;
-        C.node {{ R.node (React.S.map pcdata mpd_status) }};
-      ]];
-    div [
-      h2 [pcdata "Facebook"];
-      p [
-        pcdata "Account: ";
-        raw_input ~input_type:`Text ~name:"account" ();
-        raw_input ~input_type:`Submit ~value:"Update" ()
-      ]]
-  ]  
 
-let facebook_handler code () =
+    Wdmproject_container.page userid_o [
+      div [
+        h2 [pcdata "Lieux"];
+      ];
+      div [
+        h2 [pcdata "Local library"];
+        p [
+          pcdata "Import: ";
+          raw_input ~input_type:`Text ~name:"import" ();
+          raw_input ~input_type:`Submit ~value:"Ok" ()
+        ]];
+      div [
+        h2 [pcdata "MPD server"];
+        p [
+          pcdata "Address: ";
+          mpd_host_input;
+          pcdata " Port: ";
+          mpd_port_input;
+          mpd_button;
+          C.node {{ R.node (React.S.map pcdata mpd_status) }};
+        ]];
+      div [
+        h2 [pcdata "Facebook"];
+        (post_form ~service:Wdmproject_services.facebook_login
+           (fun () ->
+              [pcdata "Account: ";
+               raw_input ~input_type:`Submit ~value:"Update" ()]))
+          ()]
+    ]  
+
+let facebook_login_handler () () =
+  let open Wdmproject_config in
+  let redirect_uri = "http://project.hotbeverage.org/facebook" in
+  Lwt.return (Facebook.log_people_in ~client_id ~redirect_uri)
+
+let facebook_success_handler code () =
+  let open Wdmproject_config in
   let redirect_uri = "http://project.hotbeverage.org/facebook" in
   Facebook.confirme_identity ~client_id ~client_secret ~redirect_uri ~code
-  >>= Facebook.get_user_music  
+  >>= fun access_token ->
+  (if (Str.string_match (Str.regexp "access_token*") access_token 0)
+   then
+     (Facebook.get_user_music ~access_token
+      >|= (List.iter print_endline))
+   else Lwt.fail (Failure access_token))
+  >|= fun () -> Wdmproject_services.parameter_service
+
+let facebook_failure_handler _ () =
+  Lwt.return Wdmproject_services.parameter_service
 
 let () =
   Wdmproject_base.App.register
@@ -294,4 +309,16 @@ let () =
 
   Wdmproject_base.App.register
     Wdmproject_services.parameter_service
-    (Wdmproject_page.Opt.connected_page parameter_handler)
+    (Wdmproject_page.Opt.connected_page parameter_handler);
+
+  Eliom_registration.Redirection.register
+    Wdmproject_services.facebook_login_success
+    facebook_success_handler;
+
+  Eliom_registration.Redirection.register
+    Wdmproject_services.facebook_login_failure
+    facebook_failure_handler;
+
+  Eliom_registration.String_redirection.register
+    Wdmproject_services.facebook_login
+    facebook_login_handler

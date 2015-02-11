@@ -13,7 +13,17 @@ let parameter_service =
     ~path:["parameter"]
     ~get_params:unit ()
 
-let facebook_service =
+let facebook_login =
+  Eliom_service.App.post_service
+    ~fallback:parameter_service
+    ~post_params:unit ()
+
+let facebook_login_success =
   Eliom_service.App.service
     ~path:["facebook"]
-    ~get_params:(suffix (string "code")) ()
+    ~get_params:(string "code") ()
+
+let facebook_login_failure =
+  Eliom_service.App.service
+    ~path:["facebook"]
+    ~get_params:any ()

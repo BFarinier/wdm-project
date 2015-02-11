@@ -23,5 +23,5 @@ let _ = Eliom_config.parse_config [avatars]
 let db_name = "library_db"
 let () = Freebase.set_key "AIzaSyCDJwSCMuHNEe5Pi0nrQyK_K5AoNF9SRS0"
 
-let client_id = "0123456789"
-let client_secret = "0123456789"
+let client_id = "401808273311928"
+let client_secret = "9c926f3785998ebd4c43a37c29bff882"
