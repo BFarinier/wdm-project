@@ -32,13 +32,13 @@ module Page_config = struct
     Wdmproject_container.page None
       (if Ocsigen_config.get_debugmode ()
        then [p [pcdata (Printexc.to_string exn)]]
-       else [p [pcdata "Error"]])
+       else [p [pcdata "Erreur"]])
 
   let default_connected_error_page userid_o _ _ exn =
     Wdmproject_container.page userid_o
       (if Ocsigen_config.get_debugmode ()
        then [p [pcdata (Printexc.to_string exn)]]
-       else [p [pcdata "Error"]])
+       else [p [pcdata "Erreur"]])
 end
 
 

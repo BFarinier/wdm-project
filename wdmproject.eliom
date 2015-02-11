@@ -397,7 +397,7 @@ let parameter_handler userid_o () () =
       div [
         h2 [pcdata "Bibliothèque locale"];
         p [
-          pcdata "Import : ";
+          pcdata "Importer : ";
           raw_input ~input_type:`Text ~name:"import" ();
           raw_input ~input_type:`Submit ~value:"Ok" ()
         ]];
