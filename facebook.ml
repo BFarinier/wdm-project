@@ -69,12 +69,16 @@ let get_music_name ~access_token ~page_id =
   |> get_string
   >|= Ezjsonm.from_string >|= Ezjsonm.value
   >|= (fun v -> Ezjsonm.find v ["name"])
+  >|= Ezjsonm.get_string
 
 let get_user_music ~access_token = 
-  Printf.sprintf "https://graph.facebook.com/v2.2/me/music/?%s"
-    (Ocsigen_lib.Url.make_encoded_parameters ["access_token", access_token])
-  |> get_string
-  >|= Ezjsonm.from_string >|= Ezjsonm.value
-  >|= (fun v -> Ezjsonm.find v ["data"])
-  >|= Ezjsonm.get_list Ezjsonm.get_string
-  >|= List.map (fun page_id -> get_music_name ~access_token ~page_id)
+  try_lwt
+    Printf.sprintf "https://graph.facebook.com/v2.2/me/music/?%s"
+      (Ocsigen_lib.Url.make_encoded_parameters ["access_token", access_token])
+    |> get_string
+    >|= Ezjsonm.from_string >|= Ezjsonm.value
+    >|= (fun v -> Ezjsonm.find v ["data"])
+    >|= Ezjsonm.get_list Ezjsonm.get_string
+    >|= List.map (fun page_id -> get_music_name ~access_token ~page_id)
+  with
+    Not_found | Ezjsonm.Parse_error _ -> Lwt.return []
