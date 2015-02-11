@@ -23,15 +23,10 @@ let facebook_login =
     ~fallback:facebook_userid
     ~post_params:unit ()
 
-let facebook_login_state =
-  Eliom_service.App.service
-    ~path:["facebook"]
-    ~get_params:(string "code" ** string "state") ()
-
 let facebook_login_success =
   Eliom_service.App.service
     ~path:["facebook"]
-    ~get_params:(string "code") ()
+    ~get_params:(string "code" ** string "state") ()
 
 let facebook_login_failure =
   Eliom_service.App.service

@@ -425,14 +425,20 @@ let parameter_handler userid_o () () =
             [pcdata "Effacer"];
         ]
       ]
-    ]  
+    ]
+
+
+let facebook_userid_handler userid_o userid () =
+  match userid_o with
+  | Some userid -> parameter_handler userid_o () ()
+  | _ -> Lwt.fail (Failure "userid_o")
 
 let facebook_login_handler userid () =
   let open Wdmproject_config in
   let redirect_uri = "http://project.hotbeverage.org/facebook" in
   Lwt.return (Facebook.log_people_in ~client_id ~redirect_uri ~userid)
 
-let facebook_success_handler code () =
+let facebook_success_handler (code, userid) () =
   let open Wdmproject_config in
   let redirect_uri = "http://project.hotbeverage.org/facebook" in
   Facebook.confirme_identity ~client_id ~client_secret ~redirect_uri ~code
@@ -473,4 +479,8 @@ let () =
 
   Eliom_registration.String_redirection.register
     Wdmproject_services.facebook_login
-    facebook_login_handler
+    facebook_login_handler;
+
+  Wdmproject_base.App.register
+    Wdmproject_services.facebook_userid
+   (Wdmproject_page.Opt.connected_page facebook_userid_handler)
