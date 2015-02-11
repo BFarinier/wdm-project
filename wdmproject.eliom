@@ -167,7 +167,10 @@ let update_mpd_library (userid, address, port) =
             p [pcdata ("le " ^ date ^ " à " ^ lieu)]]
      in
      match concerts with
-     | `Processing -> p [pcdata "Processing..."]
+     | `Processing ->
+       p [
+         i ~a:[a_id "refresh-logo"; a_class ["fa"; "fa-refresh"; "fa-spin"]] []
+       ]
      | `Table concerts ->
        concerts
        |> List.map alternate
