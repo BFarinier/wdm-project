@@ -13,7 +13,7 @@ let uploader = Eba_userbox.uploader !Wdmproject_config.avatar_dir
 {client{
    let user_menu user uploader =
      [
-       p [pcdata "Change your password:"];
+       p [pcdata "Changer votre mot de passe :"];
        Eba_view.password_form ();
        hr ();
        Eba_userbox.upload_pic_link uploader;
@@ -39,14 +39,14 @@ let header ?user () =
           | None ->
             [
               li [a ~service:Eba_services.main_service
-                    [pcdata "Home"] ()];
+                    [pcdata "Acceuil"] ()];
             ]
           | _ ->
             [
               li [a ~service:Eba_services.main_service
-                    [pcdata "Home"] ()];
+                    [pcdata "Acceuil"] ()];
               li [a ~service:Wdmproject_services.concert_service
-                    [pcdata "Concert"] ()];
+                    [pcdata "Mes concerts"] ()];
               li [a ~service:Wdmproject_services.parameter_service
                     [pcdata "Paramètres"] ()];
             ]);
@@ -63,15 +63,15 @@ let connected_welcome_box () =
     match Eliom_reference.Volatile.get Eba_msg.wrong_pdata with
     | None ->
       p [
-        pcdata "Your personal information has not been set yet.";
+        pcdata "Vos informations personnelles n'ont pas encore été renseigné.";
         br ();
-        pcdata "Please take time to enter your name and to set a password."
+        pcdata "Veuillez prendre le temps de les compléter."
       ], (("", ""), ("", ""))
-    | Some wpd -> p [pcdata "Wrong data. Please fix."], wpd
+    | Some wpd -> p [pcdata "Données érronnées..."], wpd
   in
   (div ~a:[a_id "eba_welcome_box"]
      [
-       div [h2 [pcdata ("Welcome!")];
+       div [h2 [pcdata ("Bienvenue !")];
             info];
        Eba_view.information_form
          ~firstname:fn ~lastname:ln

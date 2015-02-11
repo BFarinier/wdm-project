@@ -284,7 +284,7 @@ let del_lieu userid n _ =
 let build_lieux_table userid lieux =
   table (List.mapi (fun i (typ, value) ->
     tr [
-      td [pcdata (typ ^ ": " ^ value)];
+      td [pcdata (typ ^ " : " ^ value)];
       td [
         D.button ~button_type:`Button
           ~a:[a_onclick (del_lieu userid i)]
@@ -301,7 +301,7 @@ let clear_db userid _ =
 let main_service_handler userid_o () () =
   Wdmproject_container.page userid_o (
     [
-      p [em [pcdata "Eliom base app: Put app content here."]]
+      p [em [pcdata ""]]
     ]
   )
 
@@ -316,7 +316,7 @@ let concert_handler userid_o () () =
 
     let btn = D.button ~button_type:`Button
         ~a:[a_onclick {{ update_concerts %userid }}]
-        [pcdata "Update"] in
+        [pcdata "Actualiser"] in
 
     Wdmproject_container.page userid_o [
       btn;
@@ -364,7 +364,7 @@ let parameter_handler userid_o () () =
     let lieu_button =
       button ~button_type:`Button
         ~a:[a_onclick {{ add_lieu %userid %lieu_type }}]
-        [pcdata "Add"] in
+        [pcdata "Ajouter"] in
 
     let mpd_host_input = D.string_input ~input_type:`Text
         ~value:(user_data.settings.mpd_server |? "") ()
@@ -378,7 +378,7 @@ let parameter_handler userid_o () () =
         ~a:[a_onclick {{ update_mpd_library %userid
                            (To_dom.of_input %mpd_host_input)
                            (To_dom.of_input %mpd_port_input) }}]
-        [pcdata "Rescan"]
+        [pcdata "Scanner"]
     in
 
     let artists_nb = Hashtbl.length user_data.library.table in
@@ -397,18 +397,18 @@ let parameter_handler userid_o () () =
         lieu_button;
       ];
       div [
-        h2 [pcdata "Local library"];
+        h2 [pcdata "Bibliothèque locale"];
         p [
-          pcdata "Import: ";
+          pcdata "Importer : ";
           raw_input ~input_type:`Text ~name:"import" ();
           raw_input ~input_type:`Submit ~value:"Ok" ()
         ]];
       div [
-        h2 [pcdata "MPD server"];
+        h2 [pcdata "Serveur MPD"];
         div [
-          pcdata "Address: ";
+          pcdata "Adresse : ";
           mpd_host_input;
-          pcdata " Port: ";
+          pcdata " Port : ";
           mpd_port_input;
           mpd_button;
           C.node {{ R.node (mpd_status) }};
@@ -417,8 +417,8 @@ let parameter_handler userid_o () () =
         h2 [pcdata "Facebook"];
         (post_form ~service:Wdmproject_services.facebook_login
            (fun () ->
-              [pcdata "Account: ";
-               raw_input ~input_type:`Submit ~value:"Update" ()]))
+              [pcdata "Extraire les musiques de mon compte Facebook : ";
+               raw_input ~input_type:`Submit ~value:"Extraire" ()]))
           (match userid_o with Some user -> Int64.to_string user | None -> "")];
       div [
         h2 [pcdata "Données collectées"];

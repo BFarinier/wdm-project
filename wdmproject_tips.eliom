@@ -15,7 +15,7 @@ let example_tip () =
     ~top:40 ~right:0 ~width:300 ~height:120
     ~arrow:(`top 300)
     ~name:"example"
-    ~content:[p [pcdata "This is an example of tip."];
-              p [pcdata "See module Wdmproject_tips to see how it is defined."]
+    ~content:[p [pcdata "Gérer les paramètre de votre compte."];
+              p [pcdata "Vous pouvez à tout instant modifier les paramètres de votre compte."]
              ]
     ()
