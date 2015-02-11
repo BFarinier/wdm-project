@@ -12,13 +12,13 @@ open Batteries
 open Defs
 
 type settings = {
-  mutable lieu: query_lieu list;
+  mutable lieux: query_lieu list;
   mutable mpd_server: string option;
   mutable mpd_port: int option;
 }
 
 let default_settings = {
-  lieu = [Ville "toulouse"];
+  lieux = [Ville "toulouse"];
   mpd_server = None;
   mpd_port = None;
 }
@@ -52,6 +52,9 @@ type concert_table = [
     `Processing
   | `Table of (string * (string * string) * string) list
 ]
+
+let fa ?(a = []) classes =
+  i ~a:(a @ [a_class ("fa" :: classes)]) []
 }}
 
 let concerts_event_h:
@@ -68,12 +71,29 @@ let concerts_event userid =
     Hashtbl.add concerts_event_h userid (e, send_e);
     e, send_e
 
+let lieux_event_h = Hashtbl.create 37
+let lieux_event userid =
+  try Hashtbl.find lieux_event_h userid with
+    Not_found ->
+    let (e: (string * string) list React.E.t), send_e = React.E.create () in
+    let e = Eliom_react.Down.of_react e in
+    Hashtbl.add lieux_event_h userid (e, send_e);
+    e, send_e
+
 (* meh *)
 let concerts_to_client : concert list -> (string * (string * string) * string) list =
   List.map (fun {artiste; lieu; date} ->
     (artiste,
      lieu,
      CalendarLib.Printer.Calendar.to_string date))
+
+let lieux_to_client lieux =
+  List.map (function
+    | Ville v -> "Ville", v
+    | Departement d -> "Département", (string_of_int d)
+    | Salle s -> "Salle", s
+    | Region r -> "Région", r
+    | Pays p -> "Pays", p) lieux
 
 module FreebaseCache = Ocsigen_cache.Make (struct
   type key = string
@@ -92,7 +112,7 @@ let update_concerts userid =
   Printf.printf "~> Start. %f\n%!" (Unix.gettimeofday ());
 
   lwt l = Lwt_list.map_p (fun lieu -> InfoConcert.get ~lieu ())
-      user_data.settings.lieu in
+      user_data.settings.lieux in
   let t1 = Unix.gettimeofday () in
   Printf.printf "~> InfoConcert done. %f\n%!" t1;
   lwt concerts = List.flatten l
@@ -147,13 +167,44 @@ let update_mpd_library (userid, address, port) =
     lwt () = update_library userid infos in
     Lwt.return true
 
-      {shared{
+let add_lieu (userid, typ, value) =
+  let lieu = match typ with
+    | "Ville" -> Ville value
+    | "Département" -> Departement (int_of_string value)
+    | "Salle" -> Salle value
+    | "Région" -> Region value
+    | _ -> Pays value
+  in
+
+  lwt user_data = get_user_data userid in
+  (if not (List.mem lieu user_data.settings.lieux) then
+     user_data.settings.lieux <- user_data.settings.lieux @ [lieu]);
+  lwt () = set_user_data userid user_data in
+  let _, send = lieux_event userid in
+  send (lieux_to_client user_data.settings.lieux);
+  Lwt.return ()
+
+let del_lieu (userid, n) =
+  lwt user_data = get_user_data userid in
+  user_data.settings.lieux <- List.remove_at n user_data.settings.lieux;
+  lwt () = set_user_data userid user_data in
+  let _, send = lieux_event userid in
+  send (lieux_to_client user_data.settings.lieux);
+  Lwt.return ()
+
+    {shared{
 type update_concerts_rpc = (int64) deriving(Json)
 type update_mpd_library_rpc = (int64 * string * int) deriving(Json)
+type add_lieu_rpc = (int64 * string * string) deriving(Json)
+type del_lieu_rpc = (int64 * int) deriving(Json)
 }}
 
 {client{
-   let mpd_status, mpd_status_s = React.S.create ""
+type meh = [ Html5_types.div_content_fun ]
+
+let (mpd_status: meh elt React.signal), mpd_status_s = React.S.create (pcdata "")
+let (lieu_select: meh elt React.signal), lieu_select_s = React.S.create (pcdata "") 
+let (lieux: meh elt list React.signal), lieux_s = React.S.create []
 
 let build_concerts_table concerts =
   let alternate =
@@ -169,7 +220,7 @@ let build_concerts_table concerts =
   match concerts with
   | `Processing ->
     p [
-      i ~a:[a_id "refresh-logo"; a_class ["fa"; "fa-refresh"; "fa-spin"]] []
+      fa ~a:[a_id "refresh-logo"] ["fa-refresh"; "fa-spin"]
     ]
   | `Table concerts ->
     concerts
@@ -190,15 +241,55 @@ let update_mpd_library userid field_host field_port _ =
   let host = field_host##value |> Js.to_string in
   let port = field_port##value |> Js.parseInt in
   Lwt.async (fun () ->
-    mpd_status_s "Processing...";
+    mpd_status_s (i ~a:[a_class ["fa"; "fa-refresh"; "fa-spin"]] []);
     update_mpd_library_rpc (userid, host, port) >|= fun ok ->
     (match ok with
-     | false -> mpd_status_s "Error"
-     | true -> mpd_status_s "Done!");
+     | false -> mpd_status_s (pcdata "Error")
+     | true -> mpd_status_s (fa ["fa-check"]));
     lwt () = Lwt_js.sleep 5. in
-    mpd_status_s "";
+    mpd_status_s (pcdata "");
     Lwt.return ()
   )
+
+let lieu_select_loop typ ville departement salle region pays =
+  Lwt.async (fun () ->
+    let typ_js = To_dom.of_select typ in
+    Lwt_js_events.changes typ_js (fun _ _ ->
+      begin match typ_js##value |> Js.to_string with
+        | "Ville" -> lieu_select_s ville
+        | "Département" -> lieu_select_s departement
+        | "Salle" -> lieu_select_s salle
+        | "Région" -> lieu_select_s region
+        | _ -> lieu_select_s pays
+      end; Lwt.return ()
+    )
+  )
+
+let add_lieu_rpc = %(server_function Json.t<add_lieu_rpc> add_lieu)
+let add_lieu userid typ _ =
+  Lwt.async (fun () ->
+    let get_val x = (To_dom.of_element x |> Obj.magic)##value |> Js.to_string in
+    add_lieu_rpc (userid,
+                  get_val typ,
+                  get_val (React.S.value lieu_select))
+  )
+
+let del_lieu_rpc = %(server_function Json.t<del_lieu_rpc> del_lieu)
+let del_lieu userid n _ =
+  Lwt.async (fun () -> del_lieu_rpc (userid, n))
+
+
+let build_lieux_table userid lieux =
+  table (List.mapi (fun i (typ, value) ->
+    tr [
+      td [pcdata (typ ^ ": " ^ value)];
+      td [
+        D.button ~button_type:`Button
+          ~a:[a_onclick (del_lieu userid i)]
+          [fa ["fa-times"]]
+      ];
+    ]
+  ) lieux)
 }}
 
 let main_service_handler userid_o () () =
@@ -233,8 +324,44 @@ let parameter_handler userid_o () () =
   | None -> Wdmproject_container.page userid_o []
   | Some userid ->
     lwt user_data = get_user_data userid in
-    let mpd_host_input = D.string_input ~input_type:`Text ()
-        ~value:(user_data.settings.mpd_server |? "")
+
+    let initial_lieux = lieux_to_client user_data.settings.lieux in
+    let lieux_e, _ = lieux_event userid in
+
+    let ville_input = D.string_input ~input_type:`Text () in
+    let departement_input = D.int_input ~input_type:`Number
+        ~a:[a_input_min 1.] () in
+    let salle_input = D.string_input ~input_type:`Text () in
+    let regions_select = D.Raw.select ~a:[a_required `Required]
+        (List.map (pcdata %> option) regions) in
+    let pays_select = D.Raw.select ~a:[a_required `Required]
+        (List.map (pcdata %> option) pays) in
+    let lieu_type = D.Raw.select
+        ~a:[a_required `Required]
+        [
+          option (pcdata "Ville");
+          option (pcdata "Département");
+          option (pcdata "Salle");
+          option (pcdata "Région");
+          option (pcdata "Pays");
+        ] in
+
+    let _ = {unit{ lieu_select_s %ville_input }} in
+    let _ = {unit{ lieu_select_loop
+                   %lieu_type
+                   %ville_input
+                   %departement_input
+                   %salle_input
+                   %regions_select
+                   %pays_select }} in
+
+    let lieu_button =
+      button ~button_type:`Button
+        ~a:[a_onclick {{ add_lieu %userid %lieu_type }}]
+        [pcdata "Add"] in
+
+    let mpd_host_input = D.string_input ~input_type:`Text
+        ~value:(user_data.settings.mpd_server |? "") ()
     in
     let mpd_port_input = D.int_input ~input_type:`Number
         ~a:[a_input_min 1.]
@@ -251,6 +378,15 @@ let parameter_handler userid_o () () =
     Wdmproject_container.page userid_o [
       div [
         h2 [pcdata "Lieux"];
+        C.node {{ R.node (
+          React.S.map (build_lieux_table %userid)
+            (React.S.hold %initial_lieux %lieux_e)
+        )
+        }};
+
+        lieu_type;
+        C.node {{ R.node (lieu_select) }};
+        lieu_button;
       ];
       div [
         h2 [pcdata "Local library"];
@@ -261,13 +397,13 @@ let parameter_handler userid_o () () =
         ]];
       div [
         h2 [pcdata "MPD server"];
-        p [
+        div [
           pcdata "Address: ";
           mpd_host_input;
           pcdata " Port: ";
           mpd_port_input;
           mpd_button;
-          C.node {{ R.node (React.S.map pcdata mpd_status) }};
+          C.node {{ R.node (mpd_status) }};
         ]];
       div [
         h2 [pcdata "Facebook"];
