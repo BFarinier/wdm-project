@@ -75,7 +75,7 @@ let get_user_music ~access_token =
   try_lwt
     Printf.sprintf "https://graph.facebook.com/v2.2/me/music/?%s"
       (Ocsigen_lib.Url.make_encoded_parameters ["access_token", access_token])
-    |> get_string
+    |> get_string >|= (fun s -> Printf.printf "%s%!" s; s)
     >|= Ezjsonm.from_string >|= Ezjsonm.value
     >|= (fun v -> Ezjsonm.find v ["data"])
     >|= Ezjsonm.get_list Ezjsonm.get_string
