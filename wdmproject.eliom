@@ -55,17 +55,32 @@ let concerts_to_client : concert list -> (string * (string * string) * string) l
      lieu,
      CalendarLib.Printer.Calendar.to_string date))
 
+module FreebaseCache = Ocsigen_cache.Make (struct
+  type key = string
+  type value = (int * string) list
+end)
+
+let freebase_cache = new FreebaseCache.cache
+  Freebase.search_artist_tags
+  500
+
 let update_concerts userid =
   lwt user_data = get_user_data userid in
+  Printf.printf "~> Start. %f\n%!" (Unix.gettimeofday ());
   lwt l = Lwt_list.map_p (fun lieu -> InfoConcert.get ~lieu ())
     user_data.settings.lieu in
+  let t1 = Unix.gettimeofday () in
+  Printf.printf "~> InfoConcert done. %f\n%!" t1;
   lwt concerts = List.flatten l
     |> List.sort_uniq (fun c1 c2 ->
       let res = CalendarLib.Calendar.compare c1.date c2.date in
       if res <> 0 then res
       else compare c1 c2)
     |> Lwt_list.map_p (fun concert ->
-      lwt tags = Freebase.search_artist_tags concert.artiste in
+      Printf.printf "%s: %!" concert.artiste;
+      lwt tags = freebase_cache#find concert.artiste in
+      List.iter (fun (_, s) -> print_string s; print_string " ") tags;
+      print_endline "<<";
       let genres = genres_of_taglist tags in
       let ((matching_artist, score), global_score) =
         Core.rank genres user_data.library in
@@ -76,16 +91,41 @@ let update_concerts userid =
         lieu = concert.lieu;
         date = concert.date
       } |> Lwt.return) in
+  let t2 = Unix.gettimeofday () in
+  Printf.printf "~> Done. %f\n%!" t2;
+  Printf.printf "~> Diff: %f\n%!" (t2 -. t1);
   let _, send_e = concerts_event userid in
   send_e (concerts_to_client concerts);
   set_user_data userid {user_data with selected_concerts = concerts}
 
+let update_library userid (infos: (artist * albums) list) =
+  lwt user_data = get_user_data userid in
+  lwt infos = Lwt_list.map_p (fun (artist, albums) ->
+    lwt tags = freebase_cache#find artist in
+    let genres = genres_of_taglist tags in
+    Lwt.return (artist, albums, genres)
+  ) infos in
+  library_add_infos user_data.library infos;
+  set_user_data userid user_data
+
+let update_mpd_library (userid, address, port) =
+  Printf.printf "update_mpd_library %s:%d\n%!" address port;
+  match ExploreMpdLibrary.stats ~port address with
+  | None -> print_endline "~> error"; Lwt.return false
+  | Some infos ->
+    print_endline "~> toto blbl";
+    lwt () = update_library userid infos in
+    Lwt.return true
+
 {shared{
   type update_concerts_rpc = (int64) deriving(Json)
+  type update_mpd_library_rpc = (int64 * string * int) deriving(Json)
  }}
 
 {client{
-   let build_concerts_table btn concerts =
+   let mpd_status, mpd_status_s = React.S.create ""
+   
+   let build_concerts_table concerts =
      let alternate =
        let switch = ref true in
        fun (artiste, lieu, date) ->
@@ -100,7 +140,6 @@ let update_concerts userid =
      |> List.map alternate
      |> (fun l ->
        div [
-         btn;
          table (List.map (fun elt -> tr [td [elt]]) l);
         ])
 
@@ -108,6 +147,20 @@ let update_concerts userid =
    let update_concerts userid _ =
      Lwt.async (fun () ->
        update_concerts_rpc userid
+     )
+
+   let update_mpd_library_rpc = %(server_function Json.t<update_mpd_library_rpc> update_mpd_library)
+   let update_mpd_library userid field_host field_port _ =
+     let host = field_host##value |> Js.to_string in
+     let port = field_port##value |> Js.parseInt in
+     Lwt.async (fun () ->
+       update_mpd_library_rpc (userid, host, port) >|= fun ok ->
+       (match ok with
+        | false -> mpd_status_s "Error"
+        | true -> mpd_status_s "Done!");
+       lwt () = Lwt_js.sleep 3. in
+       mpd_status_s "";
+       Lwt.return ()
      )
  }}
 
@@ -132,13 +185,32 @@ let concert_handler userid_o () () =
         [pcdata "Update"] in
 
     Wdmproject_container.page userid_o [
-      C.node {{ R.node (React.S.map (build_concerts_table %btn)
+      btn;
+      C.node {{ R.node (React.S.map build_concerts_table
                           (%concerts_e |> React.S.hold %initial_concerts))
               }};
     ]
 
 let parameter_handler userid_o () () =
+  match userid_o with
+  | None -> Wdmproject_container.page userid_o []
+  | Some userid ->
+    let mpd_host_input = D.string_input ~input_type:`Text () in
+    let mpd_port_input = D.int_input ~input_type:`Number
+        ~a:[a_input_min 1.]
+        ~value:6600 () in
+    let mpd_button =
+      button ~button_type:`Button
+        ~a:[a_onclick {{ update_mpd_library %userid
+                           (To_dom.of_input %mpd_host_input)
+                           (To_dom.of_input %mpd_port_input) }}]
+        [pcdata "Rescan"]
+    in
+  
   Wdmproject_container.page userid_o [
+    div [
+      h2 [pcdata "Lieux"];
+    ];
     div [
       h2 [pcdata "Local library"];
       p [
@@ -149,11 +221,12 @@ let parameter_handler userid_o () () =
     div [
       h2 [pcdata "MPD server"];
       p [
-        pcdata "Adress: ";
-        raw_input ~input_type:`Text ~name:"adress" ();
+        pcdata "Address: ";
+        mpd_host_input;
         pcdata " Port: ";
-        raw_input ~input_type:`Text ~name:"port" ();
-        raw_input ~input_type:`Submit ~value:"Rescan" ()
+        mpd_port_input;
+        mpd_button;
+        C.node {{ R.node (React.S.map pcdata mpd_status) }};
       ]];
     div [
       h2 [pcdata "Facebook"];
