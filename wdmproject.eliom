@@ -156,7 +156,7 @@ let update_mpd_library (userid, address, port) =
  }}
 
 {client{
-  type meh = [ Html5_types.div_content_fun ]
+   type meh = [ Html5_types.div_content_fun ]
    
    let (mpd_status: meh elt React.signal), mpd_status_s = React.S.create (pcdata "")
    
