@@ -52,6 +52,9 @@ type concert_table = [
     `Processing
   | `Table of (string * (string * string) * string) list
 ]
+
+let fa ?(a = []) classes =
+  i ~a:(a @ [a_class ("fa" :: classes)]) []
 }}
 
 let concerts_event_h:
@@ -153,7 +156,9 @@ let update_mpd_library (userid, address, port) =
  }}
 
 {client{
-   let mpd_status, mpd_status_s = React.S.create ""
+  type meh = [ Html5_types.div_content_fun ]
+   
+   let (mpd_status: meh elt React.signal), mpd_status_s = React.S.create (pcdata "")
    
    let build_concerts_table concerts =
      let alternate =
@@ -169,7 +174,7 @@ let update_mpd_library (userid, address, port) =
      match concerts with
      | `Processing ->
        p [
-         i ~a:[a_id "refresh-logo"; a_class ["fa"; "fa-refresh"; "fa-spin"]] []
+         fa ~a:[a_id "refresh-logo"] ["fa-refresh"; "fa-spin"]
        ]
      | `Table concerts ->
        concerts
@@ -190,13 +195,13 @@ let update_mpd_library (userid, address, port) =
      let host = field_host##value |> Js.to_string in
      let port = field_port##value |> Js.parseInt in
      Lwt.async (fun () ->
-       mpd_status_s "Processing...";
+       mpd_status_s (i ~a:[a_class ["fa"; "fa-refresh"; "fa-spin"]] []);
        update_mpd_library_rpc (userid, host, port) >|= fun ok ->
        (match ok with
-        | false -> mpd_status_s "Error"
-        | true -> mpd_status_s "Done!");
+        | false -> mpd_status_s (pcdata "Error")
+        | true -> mpd_status_s (fa ["fa-check"]));
        lwt () = Lwt_js.sleep 5. in
-       mpd_status_s "";
+       mpd_status_s (pcdata "");
        Lwt.return ()
      )
  }}
@@ -261,13 +266,13 @@ let parameter_handler userid_o () () =
       ]];
     div [
       h2 [pcdata "MPD server"];
-      p [
+      div [
         pcdata "Address: ";
         mpd_host_input;
         pcdata " Port: ";
         mpd_port_input;
         mpd_button;
-        C.node {{ R.node (React.S.map pcdata mpd_status) }};
+        C.node {{ R.node (mpd_status) }};
       ]];
     div [
       h2 [pcdata "Facebook"];
