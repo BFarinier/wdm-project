@@ -42,7 +42,7 @@ let searches_to_string : type a. a searches -> string = function
 
 let (set_key, get_key) =
   let key = ref None in
-  (fun (f: unit -> string) () -> key := Some (f ())),
+  (fun k -> key := Some k),
   (fun () -> !key)
 
 let make_search_request (search: 'a searches) ?(limit=25) ?(offset=0) str : string =

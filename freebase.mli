@@ -1,3 +1,6 @@
+val set_key : string -> unit
+val get_key : unit -> string option
+
 type artist_tags = [`Genre|`Origin|`Album|`Label|`Active_start|`Active_end|`Contribution]
 type album_tags  = [`Artist|`Featured_artists|`Release_date|`Genre|`Release_type|`Album_content_type|`Releases|`Primary_release|`Compositions]
 type genre_tags  = [`Parent_genre|`Subgenre|`Artists|`Albums|`Recordings]
