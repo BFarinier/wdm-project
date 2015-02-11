@@ -39,7 +39,7 @@ let header ?user () =
           | None ->
             [
               li [a ~service:Eba_services.main_service
-                    [pcdata "Home"] ()];
+                    [pcdata "Acceuil"] ()];
             ]
           | _ ->
             [
