@@ -20,8 +20,8 @@ let rank (artist_req: genres) ({albums_nb; table}: music_library):
   (artist * float) (* similarité artiste <-> artiste max *)
   * float (* score de matching global avec les tags de la bibliothèque *)
   =
-  let max_cos_similarity = Hashtbl.fold (fun name (_, genres) (max_name, max_similarity) ->
-    let sim = cos_similarity artist_req genres in
+  let max_cos_similarity = Hashtbl.fold (fun name (coef, _, genres) (max_name, max_similarity) ->
+    let sim = coef *. (cos_similarity artist_req genres) in
     if Float.Compare.(sim > max_similarity) then
       (name, sim)
     else
@@ -29,9 +29,9 @@ let rank (artist_req: genres) ({albums_nb; table}: music_library):
   in
 
   let global_score =
-    Hashtbl.fold (fun name (albums, genres) acc ->
+    Hashtbl.fold (fun name (coef, albums, genres) acc ->
       let n = Set.cardinal albums in
-      let artist_weight = (Float.of_int n) /. (Float.of_int albums_nb) in
+      let artist_weight = coef *. (Float.of_int n) /. (Float.of_int albums_nb) in
       Map.foldi (fun genre genre_weight acc ->
         let s = (Map.Exceptionless.find genre acc) |? 0. in
         Map.add genre (s +. (genre_weight *. artist_weight)) acc

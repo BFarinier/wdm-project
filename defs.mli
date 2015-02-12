@@ -33,7 +33,8 @@ type albums = string Set.t
 type music_library = {
   mutable albums_nb: int;
   table: (artist,
-          albums
+          float
+          * albums
           * genres)
       Hashtbl.t;
 }

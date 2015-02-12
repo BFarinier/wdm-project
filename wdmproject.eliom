@@ -25,7 +25,8 @@ let default_settings = {
 
 type user_data = {
   settings: settings;
-  selected_concerts: concert list;
+  selected_concerts: (concert * string * bool) list;
+  blacklist: artist Set.t;
   library: music_library;
 }
 
@@ -39,6 +40,7 @@ let get_user_data userid =
        let data = {
          settings = default_settings;
          selected_concerts = [];
+         blacklist = Set.empty;
          library = create_library ();
        } in
        Ocsipersist.add db userid data >>= fun () ->
@@ -50,7 +52,7 @@ let set_user_data userid data =
     {shared{
 type concert_table = [
     `Processing
-  | `Table of (string * (string * string) * string) list
+  | `Table of (string * (string * string) * string * bool) list
 ]
 
 let fa ?(a = []) classes =
@@ -81,11 +83,13 @@ let lieux_event userid =
     e, send_e
 
 (* meh *)
-let concerts_to_client : concert list -> (string * (string * string) * string) list =
-  List.map (fun {artiste; lieu; date} ->
+let concerts_to_client : (concert * string * bool) list ->
+  (string * (string * string) * string * bool) list =
+  List.map (fun ({artiste; lieu; date}, matching, b) ->
     (artiste,
      lieu,
-     CalendarLib.Printer.Calendar.to_string date))
+     CalendarLib.Printer.Calendar.to_string date,
+     b))
 
 let lieux_to_client lieux =
   List.map (function
@@ -121,20 +125,27 @@ let update_concerts userid =
                    if res <> 0 then res
                    else compare c1 c2)
                  |> lwt_list_filter_map_p (fun concert ->
-                   lwt tags = freebase_cache#find concert.artiste in
-                   let genres = genres_of_taglist tags in
-                   let ((matching_artist, score), global_score) =
-                     Core.rank genres user_data.library in
+                   if Set.mem concert.artiste user_data.blacklist then Lwt.return None
+                   else begin
+                     lwt tags = freebase_cache#find concert.artiste in
+                     let genres = genres_of_taglist tags in
+                     let ((matching_artist, score), global_score) =
+                       Core.rank genres user_data.library in
 
-                   if Core.filter_score ((matching_artist, score), global_score) then
-                     {
-                       artiste = Printf.sprintf "%s - (%s, %f) / %f"
-                           concert.artiste matching_artist score global_score;
-                       lieu = concert.lieu;
-                       date = concert.date
-                     } |> Option.some |> Lwt.return
-                   else Lwt.return None
+                     if Core.filter_score ((matching_artist, score), global_score) then
+                       {
+                         artiste = Printf.sprintf "%s - (%s, %f) / %f"
+                             concert.artiste matching_artist score global_score;
+                         lieu = concert.lieu;
+                         date = concert.date
+                       }
+                       |> (fun x -> (x, matching_artist, false))
+                       |> Option.some
+                       |> Lwt.return
+                     else Lwt.return None
+                   end
                  ) in
+
   let t2 = Unix.gettimeofday () in
   Printf.printf "~> Done. %f\n%!" t2;
   Printf.printf "~> Diff: %f\n%!" (t2 -. t1);
@@ -142,12 +153,12 @@ let update_concerts userid =
   set_user_data userid {user_data with selected_concerts = concerts}
 
 let update_library userid (infos: (artist * albums) list) =
-  lwt user_data = get_user_data userid in
   lwt infos = Lwt_list.map_p (fun (artist, albums) ->
     lwt tags = freebase_cache#find artist in
     let genres = genres_of_taglist tags in
     Lwt.return (artist, albums, genres)
   ) infos in
+  lwt user_data = get_user_data userid in
   library_add_infos user_data.library infos;
   set_user_data userid user_data
 
@@ -193,12 +204,27 @@ let clear_db userid =
   lwt user_data = get_user_data userid in
   set_user_data userid {user_data with library = create_library ()}
 
+let downvote (userid, n) =
+  lwt user_data = get_user_data userid in
+  let (concert, matching) = List.nth user_data.selected_concerts n
+                            |> Tuple3.get12 in
+  let selected_concerts =
+    (* List.modify_at n (fun (c, matching, _) -> (c, matching, true)) *)
+    (*   user_data.selected_concerts in *)
+    List.remove_at n user_data.selected_concerts in
+  let blacklist = Set.add concert.artiste user_data.blacklist in
+  let (matching_score, albums, genres) = Hashtbl.find user_data.library.table matching in
+  let matching_score = matching_score *. 0.6 in
+  Hashtbl.replace user_data.library.table matching (matching_score, albums, genres);
+  set_user_data userid {user_data with selected_concerts; blacklist}
+
 {shared{
 type update_concerts_rpc = (int64) deriving(Json)
 type update_mpd_library_rpc = (int64 * string * int) deriving(Json)
 type add_lieu_rpc = (int64 * string * string) deriving(Json)
 type del_lieu_rpc = (int64 * int) deriving(Json)
 type clear_db_rpc = (int64) deriving(Json)
+type downvote_rpc = (int64 * int) deriving(Json)
 }}
 
 {client{
@@ -208,16 +234,40 @@ let (mpd_status: meh elt React.signal), mpd_status_s = React.S.create (pcdata ""
 let (lieu_select: meh elt React.signal), lieu_select_s = React.S.create (pcdata "") 
 let (lieux: meh elt list React.signal), lieux_s = React.S.create []
 
-let build_concerts_table concerts =
+let downvote_rpc = %(server_function Json.t<downvote_rpc> downvote)
+let downvote userid n = Lwt.async (fun () ->
+  downvote_rpc (userid, n)
+)
+
+let build_concerts_table userid concerts =
   let alternate =
     let switch = ref true in
-    fun (artiste, lieu, date) ->
+    fun i (artiste, lieu, date, is_downvoted) ->
       switch := not (!switch);
       let lieu = Printf.sprintf "%s (%s)" (fst lieu) (snd lieu) in
-      div
-        ~a:[a_id (if (!switch) then "concert_odd" else "concert_even")]
-        [h2 [pcdata artiste];
-         p [pcdata ("le " ^ date ^ " à " ^ lieu)]]
+      let btn = D.button ~button_type:`Button
+          ~a:([a_class ["btn"; "btn-default"]] @
+              (if is_downvoted then [a_disabled `Disabled] else []))
+          [fa ["fa-arrow-down"]]
+      in
+      Lwt.async (fun () ->
+        let btn_js = To_dom.of_button btn in
+        Lwt_js_events.clicks btn_js (fun _ _ ->
+          downvote userid i;
+          btn_js##setAttribute (Js.string "disabled", Js.string "disabled");
+          Lwt.return ()
+        )
+      );
+      
+      tr [
+        td [
+          div
+            ~a:[a_id (if (!switch) then "concert_odd" else "concert_even")]
+            [h2 [pcdata artiste];
+             p [pcdata ("le " ^ date ^ " à " ^ lieu)]]
+        ];
+        td [btn]
+      ]
   in
   match concerts with
   | `Processing ->
@@ -226,10 +276,10 @@ let build_concerts_table concerts =
     ]
   | `Table concerts ->
     concerts
-    |> List.map alternate
+    |> List.mapi alternate
     |> (fun l ->
       div ~a:[a_id "bloc-principal"] [
-        table ~a:[a_class ["table"]] (List.map (fun elt -> tr [td [elt]]) l);
+        table ~a:[a_class ["table"]] l
       ])
 
 let update_concerts_rpc = %(server_function Json.t<update_concerts_rpc> update_concerts)
@@ -322,7 +372,7 @@ let concert_handler userid_o () () =
 
     Wdmproject_container.page userid_o [
       btn;
-      C.node {{ R.node (React.S.map build_concerts_table
+      C.node {{ R.node (React.S.map (build_concerts_table %userid)
                           (%concerts_e |> React.S.hold %initial_concerts))
               }};
     ]

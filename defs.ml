@@ -113,7 +113,8 @@ type albums = string Set.t
 type music_library = {
   mutable albums_nb: int;
   table: (artist,
-          albums
+          float (* artist score (downvotes) *)
+          * albums
           * genres)
       Hashtbl.t;
 }
@@ -124,9 +125,10 @@ let create_library () =
 let library_add_infos lib (artists: (artist * albums * genres) list) =
   List.iter (fun (artist, albums, genres) ->
     try
-      let (a, g) = Hashtbl.find lib.table artist in
+      let (score, a, g) = Hashtbl.find lib.table artist in
       lib.albums_nb <- lib.albums_nb + (Set.cardinal @@ Set.diff albums a);
       Hashtbl.replace lib.table artist (
+        score,
         Set.union albums a,
         Map.merge (fun genre w1 w2 ->
           match w1, w2 with
@@ -137,7 +139,7 @@ let library_add_infos lib (artists: (artist * albums * genres) list) =
       )
     with Not_found ->
       lib.albums_nb <- lib.albums_nb + (Set.cardinal albums);
-      Hashtbl.add lib.table artist (albums, genres)
+      Hashtbl.add lib.table artist (1., albums, genres)
   ) artists
 
 let genres_of_taglist (tags: (int * string) list): genres =
