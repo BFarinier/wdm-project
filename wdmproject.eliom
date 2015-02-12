@@ -25,7 +25,7 @@ let default_settings = {
 
 type user_data = {
   settings: settings;
-  selected_concerts: (concert * string * bool) list;
+  selected_concerts: (concert * artist * string * bool) list;
   blacklist: artist Set.t;
   library: music_library;
 }
@@ -52,7 +52,7 @@ let set_user_data userid data =
     {shared{
 type concert_table = [
     `Processing
-  | `Table of (string * (string * string) * string * bool) list
+  | `Table of (string * (string * string) * string * string * bool) list
 ]
 
 let fa ?(a = []) classes =
@@ -83,12 +83,13 @@ let lieux_event userid =
     e, send_e
 
 (* meh *)
-let concerts_to_client : (concert * string * bool) list ->
-  (string * (string * string) * string * bool) list =
-  List.map (fun ({artiste; lieu; date}, matching, b) ->
+let concerts_to_client : (concert * artist * string * bool) list ->
+  (string * (string * string) * string * string * bool) list =
+  List.map (fun ({artiste; lieu; date}, matching, infos, b) ->
     (artiste,
      lieu,
      CalendarLib.Printer.Calendar.to_string date,
+     infos,
      b))
 
 let lieux_to_client lieux =
@@ -132,14 +133,14 @@ let update_concerts userid =
                      let ((matching_artist, score), global_score) =
                        Core.rank genres user_data.library in
 
+		     let infos = Printf.sprintf "(%s, %f) / %f" matching_artist score global_score in
                      if Core.filter_score ((matching_artist, score), global_score) then
                        {
-                         artiste = Printf.sprintf "%s - (%s, %f) / %f"
-                             concert.artiste matching_artist score global_score;
+                         artiste = concert.artiste;
                          lieu = concert.lieu;
                          date = concert.date
                        }
-                       |> (fun x -> (x, matching_artist, false))
+                       |> (fun x -> (x, matching_artist, infos, false))
                        |> Option.some
                        |> Lwt.return
                      else Lwt.return None
@@ -207,12 +208,13 @@ let clear_db userid =
 let downvote (userid, n) =
   lwt user_data = get_user_data userid in
   let (concert, matching) = List.nth user_data.selected_concerts n
-                            |> Tuple3.get12 in
+                            |> Tuple4.get12 in
   let selected_concerts =
     (* List.modify_at n (fun (c, matching, _) -> (c, matching, true)) *)
     (*   user_data.selected_concerts in *)
     List.remove_at n user_data.selected_concerts in
   let blacklist = Set.add concert.artiste user_data.blacklist in
+  print_endline ("blacklisting : " ^ concert.artiste);
   let (matching_score, albums, genres) = Hashtbl.find user_data.library.table matching in
   let matching_score = matching_score *. 0.9 in
   Hashtbl.replace user_data.library.table matching (matching_score, albums, genres);
@@ -242,7 +244,7 @@ let downvote userid n = Lwt.async (fun () ->
 let build_concerts_table userid concerts =
   let alternate =
     let switch = ref true in
-    fun i (artiste, lieu, date, is_downvoted) ->
+    fun i (artiste, lieu, date, infos, is_downvoted) ->
       switch := not (!switch);
       let lieu = Printf.sprintf "%s (%s)" (fst lieu) (snd lieu) in
       let btn = D.button ~button_type:`Button
@@ -263,7 +265,7 @@ let build_concerts_table userid concerts =
         td [
           div
             ~a:[a_id (if (!switch) then "concert_odd" else "concert_even")]
-            [h2 [pcdata artiste];
+            [h2 [pcdata (artiste ^ " - " ^ infos)];
              p [pcdata ("le " ^ date ^ " à " ^ lieu)]]
         ];
         td [btn]
