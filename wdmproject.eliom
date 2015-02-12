@@ -396,13 +396,13 @@ let parameter_handler userid_o () () =
         C.node {{ R.node (lieu_select) }};
         lieu_button;
       ];
-      div [
-        h2 [pcdata "Bibliothèque locale"];
-        p [
-          pcdata "Importer : ";
-          raw_input ~input_type:`Text ~name:"import" ();
-          raw_input ~input_type:`Submit ~value:"Ok" ()
-        ]];
+      (* div [ *)
+      (*   h2 [pcdata "Bibliothèque locale"]; *)
+      (*   p [ *)
+      (*     pcdata "Importer : "; *)
+      (*     raw_input ~input_type:`Text ~name:"import" (); *)
+      (*     raw_input ~input_type:`Submit ~value:"Ok" () *)
+      (*   ]]; *)
       div [
         h2 [pcdata "Serveur MPD"];
         div [
