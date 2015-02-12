@@ -214,7 +214,7 @@ let downvote (userid, n) =
     List.remove_at n user_data.selected_concerts in
   let blacklist = Set.add concert.artiste user_data.blacklist in
   let (matching_score, albums, genres) = Hashtbl.find user_data.library.table matching in
-  let matching_score = matching_score *. 0.6 in
+  let matching_score = matching_score *. 0.9 in
   Hashtbl.replace user_data.library.table matching (matching_score, albums, genres);
   set_user_data userid {user_data with selected_concerts; blacklist}
 
