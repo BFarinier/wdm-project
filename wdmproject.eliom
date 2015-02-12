@@ -384,18 +384,19 @@ let parameter_handler userid_o () () =
     let artists_nb = Hashtbl.length user_data.library.table in
 
     Wdmproject_container.page userid_o [
-      div [
-        h2 [pcdata "Lieux"];
-        C.node {{ R.node (
-          React.S.map (build_lieux_table %userid)
-            (React.S.hold %initial_lieux %lieux_e)
-        )
-        }};
+      div ~a:[a_id "parametres"] [
+        div [
+          h2 [pcdata "Lieux"];
+          C.node {{ R.node (
+            React.S.map (build_lieux_table %userid)
+              (React.S.hold %initial_lieux %lieux_e)
+          )
+          }};
 
-        lieu_type;
-        C.node {{ R.node (lieu_select) }};
-        lieu_button;
-      ];
+          lieu_type;
+          C.node {{ R.node (lieu_select) }};
+          lieu_button;
+        ];
       (* div [ *)
       (*   h2 [pcdata "Bibliothèque locale"]; *)
       (*   p [ *)
@@ -403,29 +404,30 @@ let parameter_handler userid_o () () =
       (*     raw_input ~input_type:`Text ~name:"import" (); *)
       (*     raw_input ~input_type:`Submit ~value:"Ok" () *)
       (*   ]]; *)
-      div [
-        h2 [pcdata "Serveur MPD"];
         div [
-          pcdata "Adresse : ";
-          mpd_host_input;
-          pcdata " Port : ";
-          mpd_port_input;
-          mpd_button;
-          C.node {{ R.node (mpd_status) }};
-        ]];
-      div [
-        h2 [pcdata "Facebook"];
-        (post_form ~service:Wdmproject_services.facebook_login
-           (fun () ->
-              [pcdata "Extraire les musiques de mon compte Facebook : ";
-               raw_input ~input_type:`Submit ~value:"Extraire" ()]))
-          (match userid_o with Some user -> Int64.to_string user | None -> "")];
-      div [
-        h2 [pcdata "Données collectées"];
+          h2 [pcdata "Serveur MPD"];
+          div [
+            pcdata "Adresse : ";
+            mpd_host_input;
+            pcdata " Port : ";
+            mpd_port_input;
+            mpd_button;
+            C.node {{ R.node (mpd_status) }};
+          ]];
         div [
-          pcdata (Printf.sprintf "%d artists " artists_nb);
-          button ~button_type:`Button ~a:[a_onclick {{ clear_db %userid }}]
-            [pcdata "Effacer"];
+          h2 [pcdata "Facebook"];
+          (post_form ~service:Wdmproject_services.facebook_login
+             (fun () ->
+                [pcdata "Extraire les musiques de mon compte Facebook : ";
+                 raw_input ~input_type:`Submit ~value:"Extraire" ()]))
+            (match userid_o with Some user -> Int64.to_string user | None -> "")];
+        div [
+          h2 [pcdata "Données collectées"];
+          div [
+            pcdata (Printf.sprintf "%d artists " artists_nb);
+            button ~button_type:`Button ~a:[a_onclick {{ clear_db %userid }}]
+              [pcdata "Effacer"];
+          ]
         ]
       ]
     ]

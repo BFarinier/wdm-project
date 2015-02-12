@@ -94,6 +94,13 @@ div#eba_welcome_box input[type="submit"] {
   font-weight: bold;
 }
 
+div#parametres {
+    width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: left;
+}
+
 /*****************************************************************************
 /* Misc boxes */
 ul#wdmproject-navbar {
