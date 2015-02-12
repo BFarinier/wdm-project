@@ -50,7 +50,7 @@ div#eba_login_signup_box h2 {
   font-size: 12px;
 }
 div#eba_login_signup_box h2.pressed {
-  color: black;
+  color: #2c3e50;
 }
 
 /* User box */
@@ -73,6 +73,7 @@ div#eba_login_signup_box h2.pressed {
 
 #eba-user-box div.eba_username {
   padding: 0px 8px;
+  color: #ffffff;
 }
 
 #eba-user-box i.fa {
