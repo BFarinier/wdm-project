@@ -39,12 +39,12 @@ let header ?user () =
           | None ->
             [
               li [a ~service:Eba_services.main_service
-                    [pcdata "Acceuil"] ()];
+                    [pcdata "Accueil"] ()];
             ]
           | _ ->
             [
               li [a ~service:Eba_services.main_service
-                    [pcdata "Acceuil"] ()];
+                    [pcdata "Accueil"] ()];
               li [a ~service:Wdmproject_services.concert_service
                     [pcdata "Mes concerts"] ()];
               li [a ~service:Wdmproject_services.parameter_service
