@@ -43,7 +43,4 @@ let rank (artist_req: genres) ({albums_nb; table}: music_library):
   (max_cos_similarity, global_score)
 
 let filter_score ((artist, score), global_score): bool =
-  if score <= 0.1 || global_score <= 0.1 then
-    false
-  else
-    true
+  (score +. global_score >= 0.8 || (score >= 0.1 && global_score >= 0.1))
