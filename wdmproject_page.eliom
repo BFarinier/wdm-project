@@ -16,6 +16,7 @@ module Page_config = struct
     ["jquery.Jcrop.css"];
     ["eba.css"];
     ["wdmproject.css"];
+    ["bootstrap.min.css"];
   ]
 
   let js = [
