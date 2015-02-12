@@ -13,12 +13,12 @@ hr {
   border-bottom: 1px #ddd solid;
 }
 
-input {
+/*input {
   background-color: #eef8ff;
 }
 input[type="submit"] {
   background-color: #4183c4;
-}
+}*/
 
 .button {
   border: none;
@@ -88,11 +88,11 @@ div#eba_welcome_box {
 div#eba_welcome_box h2 {
   margin-top: 0;
 }
-div#eba_welcome_box input[type="submit"] {
+/*div#eba_welcome_box input[type="submit"] {
   width: 246px;
   padding: 8px;
   font-weight: bold;
-}
+}*/
 
 div#parametres {
     width: 900px;
