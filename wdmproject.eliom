@@ -18,7 +18,7 @@ type settings = {
 }
 
 let default_settings = {
-  lieux = [Ville "toulouse"];
+  lieux = [];
   mpd_server = None;
   mpd_port = None;
 }
