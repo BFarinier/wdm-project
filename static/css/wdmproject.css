@@ -5,7 +5,7 @@
 /* Default tag style */
 
 a, a:visited {
-  color: #4183c4;
+  color: #ffffff;
 }
 
 hr {
@@ -17,13 +17,13 @@ hr {
   background-color: #eef8ff;
 }
 input[type="submit"] {
-  background-color: #4183c4;
+  background-color: #ffffff;
 }*/
 
 .button {
   border: none;
-  background-color: #4183c4;
-  color: white;
+  background-color: #ecf0f1;
+  color: #2c3e50;
 }
 
 /*****************************************************************************
@@ -47,8 +47,7 @@ body {
 #wdmproject-header {
   position: relative;
   height: 50px;
-  background-color: #ddeeff;
-  color: white;
+  background-color: #2980b9;
   padding: 0 50px;
   margin-left: auto;
   margin-right: auto;
@@ -67,11 +66,11 @@ body {
 #wdmproject-footer {
   text-align: center;
   padding: 20px;
-  height: 30px;
+  height: 60px;
   margin-left: auto;
   margin-right: auto;
-  background-color: #ddeeff;
-  color: #445588;
+  background-color: #2980b9;
+  color: #2c3e50;
 }
 
 div#eba_welcome_box {
