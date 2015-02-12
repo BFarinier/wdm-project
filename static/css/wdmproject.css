@@ -26,7 +26,6 @@ input[type="submit"] {
   color: white;
 }
 
-
 /*****************************************************************************
 /* Main layout */
 
@@ -93,6 +92,13 @@ div#eba_welcome_box h2 {
   padding: 8px;
   font-weight: bold;
 }*/
+
+div#bloc-principal {
+    width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: left;
+}
 
 /*****************************************************************************
 /* Misc boxes */
