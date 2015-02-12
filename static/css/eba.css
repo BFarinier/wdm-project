@@ -7,8 +7,8 @@ a {
   cursor: pointer;
 }
 
-input {
-  border: none;
+/*input {
+border: none;
   padding: 2px 4px;
 }
 input:focus {
@@ -19,7 +19,7 @@ input[type="submit"]:hover {
 }
 input[type="submit"]:focus {
   outline: 2px solid #ddd;
-}
+}*/
 
 /* Login box */
 div#eba_login_signup_box {
